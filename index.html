@@ -447,8 +447,21 @@ function csvToJobs(rows){
 async function loadJobs(){
   const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-label');
   dot.className='sync-dot pulse';lbl.textContent='Syncing...';
+  // Save run assignments, job order, bringToUnit flags before sync
   const saved={};
-  DAYS.forEach(day=>dayRuns[day].forEach(run=>run.jobIds.forEach(jid=>{const j=allJobs.find(x=>x.id===jid);if(j)saved[j.chassis+'|'+j.from+'|'+j.to]={runId:run.id,runDay:day};})));
+  const jobOrder={};   // key -> ordered array index within run
+  const btuFlags={};   // key -> bringToUnit bool
+  DAYS.forEach(day=>dayRuns[day].forEach(run=>{
+    run.jobIds.forEach((jid,idx)=>{
+      const j=allJobs.find(x=>x.id===jid);
+      if(j){
+        const key=j.chassis+'|'+j.from+'|'+j.to;
+        saved[key]={runId:run.id,runDay:day};
+        jobOrder[key]=idx;
+        if(j.bringToUnit)btuFlags[key]=true;
+      }
+    });
+  }));
   try{
     const res=await fetch(getCsvUrl(),{cache:'no-store'});
     if(!res.ok)throw new Error('HTTP '+res.status);
@@ -457,8 +470,24 @@ async function loadJobs(){
     if(!text.trim())throw new Error('Empty response');
     const rows=parseCSV(text);
     const fresh=csvToJobs(rows);
+    // Clear run jobIds but preserve order slots
     DAYS.forEach(day=>dayRuns[day].forEach(r=>r.jobIds=[]));
-    fresh.forEach(j=>{const key=j.chassis+'|'+j.from+'|'+j.to;if(saved[key]){j.runId=saved[key].runId;j.runDay=saved[key].runDay;const run=dayRuns[saved[key].runDay]&&dayRuns[saved[key].runDay].find(r=>r.id===saved[key].runId);if(run)run.jobIds.push(j.id);}});
+    // Re-assign jobs to runs preserving order
+    const toPlace=[];
+    fresh.forEach(j=>{
+      const key=j.chassis+'|'+j.from+'|'+j.to;
+      if(saved[key]){
+        j.runId=saved[key].runId;j.runDay=saved[key].runDay;
+        if(btuFlags[key])j.bringToUnit=true;
+        toPlace.push({j,idx:jobOrder[key]??999,runId:saved[key].runId,runDay:saved[key].runDay});
+      }
+    });
+    // Sort by original index before pushing to preserve order
+    toPlace.sort((a,b)=>a.idx-b.idx);
+    toPlace.forEach(({j,runId,runDay})=>{
+      const run=dayRuns[runDay]&&dayRuns[runDay].find(r=>r.id===runId);
+      if(run)run.jobIds.push(j.id);
+    });
     allJobs=fresh;dot.className='sync-dot live';lbl.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     render();if(autoTimer)clearTimeout(autoTimer);autoTimer=setTimeout(loadJobs,60000);
   }catch(e){dot.className='sync-dot error';lbl.textContent='Sync failed: '+e.message;setTimeout(loadJobs,30000);}
