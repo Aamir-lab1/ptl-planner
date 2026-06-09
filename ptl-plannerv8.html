@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTL Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface2:#1f2438;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.16);
+  --text:#e8eaf0;--muted:#7a8099;
+  --teal:#00c9a7;--teal-dim:rgba(0,201,167,0.13);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,0.13);
+  --red:#ff5f5f;--red-dim:rgba(255,95,95,0.10);
+  --blue:#4f8ef7;--blue-dim:rgba(79,142,247,0.13);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.13);
+  --green:#4ade80;--green-dim:rgba(74,222,128,0.13);
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.logo{font-family:var(--mono);font-size:14px;color:var(--teal)}
+.logo span{color:var(--muted)}
+.date-pill{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:3px 9px}
+.sync-btn{font-size:11px;font-weight:500;padding:5px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.sync-btn:hover{color:var(--teal);border-color:var(--teal)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.sync-dot.live{background:var(--teal)}
+.sync-dot.pulse{background:var(--teal);animation:pulse 1s ease-in-out infinite}
+.sync-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.btn{font-family:var(--font);font-size:12px;font-weight:500;padding:6px 13px;border-radius:6px;border:none;cursor:pointer;transition:all .15s}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.25)}
+.btn-primary{background:var(--teal);color:#071a15}
+.btn-primary:hover{background:#00dbb8}
+.btn-amber{background:var(--amber);color:#1a1000}
+.btn-amber:hover{background:#ffb733}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(255,95,95,.3)}
+.btn-danger:hover{background:var(--red-dim)}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 14px;gap:2px;overflow-x:auto}
+.tab{font-size:12px;font-weight:500;padding:9px 14px;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;padding:0 4px;font-size:10px;font-weight:600;margin-left:5px}
+.tc-amber{background:var(--amber-dim);color:var(--amber)}
+.tc-blue{background:var(--blue-dim);color:var(--blue)}
+.tc-teal{background:var(--teal-dim);color:var(--teal)}
+
+/* STATS */
+.stats{display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.stat{flex:1;background:var(--surface);padding:6px 8px;text-align:center;min-width:0}
+.stat-val{font-family:var(--mono);font-size:15px;font-weight:500}
+.stat-val.green{color:var(--teal)}
+.stat-val.amber{color:var(--amber)}
+.stat-val.blue{color:var(--blue)}
+.stat-val.red{color:var(--red)}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+
+/* VIEWS */
+.view{display:none;height:calc(100vh - 148px);overflow:hidden}
+.view.active{display:flex;flex-direction:column}
+.view-scroll{overflow-y:auto;padding:12px;flex:1}
+.view-scroll::-webkit-scrollbar{width:3px}
+.view-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* PLANNING VIEW */
+.plan-layout{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;overflow:hidden}
+.plan-left{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+.plan-right{display:flex;flex-direction:column;overflow:hidden}
+
+/* PANEL HEADERS */
+.panel-hdr{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex-shrink:0}
+.panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+.search{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;width:130px}
+.search:focus{border-color:var(--teal)}
+.search::placeholder{color:var(--muted)}
+.filter-btn{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.filter-btn:hover,.filter-btn.active{background:var(--teal-dim);color:var(--teal);border-color:rgba(0,201,167,.3)}
+.filter-btn.f-amber.active{background:var(--amber-dim);color:var(--amber);border-color:rgba(245,166,35,.3)}
+.zoom-btn{font-size:14px;width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s}
+.zoom-btn:hover{color:var(--text);border-color:rgba(255,255,255,.25)}
+
+/* JOB LIST */
+
+.type-pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.pill-trailer{background:var(--teal-dim);color:var(--teal)}
+.pill-driven{background:var(--blue-dim);color:var(--blue)}
+.pill-sub{background:var(--purple-dim);color:var(--purple)}
+.sla-pill{font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;white-space:nowrap}
+.sla-ok{background:var(--green-dim);color:var(--green)}
+.sla-warn{background:var(--amber-dim);color:var(--amber)}
+.sla-over{background:var(--red-dim);color:var(--red)}
+.jc-note{font-size:10px;color:var(--amber);background:var(--amber-dim);border-radius:4px;padding:1px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+
+/* JOB TABLE */
+.job-table-wrap{flex:1;overflow-y:auto;overflow-x:hidden}
+.job-table-wrap::-webkit-scrollbar{width:3px}
+.job-table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.job-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.job-table thead{position:sticky;top:0;z-index:5}
+.job-table thead tr{background:var(--surface);border-bottom:1px solid var(--border2)}
+.job-table thead th{padding:7px 8px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;user-select:none}
+.job-table tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.job-table tbody tr:hover{background:rgba(255,255,255,.04)}
+.job-table tbody tr.row-selected{background:rgba(0,201,167,.09);border-left:2px solid var(--teal)}
+.job-table tbody tr.row-sla-warn{border-left:2px solid var(--amber)}
+.job-table tbody tr.row-sla-over{border-left:2px solid var(--red)}
+.job-table td{padding:7px 8px;color:var(--text);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.job-table td.size-sm{padding:5px 7px;font-size:11px}
+.job-table td.size-xs{padding:3px 6px;font-size:11px}
+.td-model{font-weight:600;font-size:13px;color:var(--text)}
+.td-model.size-sm{font-size:12px}
+.td-model.size-xs{font-size:11px}
+.td-reg{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.td-muted{color:var(--muted)}
+.section-row td{background:var(--surface2);font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:4px 8px;border-bottom:1px solid var(--border)}
+.col-cust{width:15%}.col-model{width:10%}.col-reg{width:11%}.col-type{width:9%}.col-from{width:18%}.col-to{width:18%}.col-del{width:9%}.col-sla{width:10%}
+
+/* RUN TABLE */
+.run-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.run-table thead tr{background:var(--surface2);border-bottom:1px solid var(--border2)}
+.run-table thead th{padding:5px 8px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.run-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:default}
+.run-table tbody tr:last-child{border-bottom:none}
+.run-table tbody tr:hover{background:rgba(255,255,255,.03)}
+.run-table tbody tr.btu-row td.td-to{color:var(--purple);font-weight:500}
+.run-table td{padding:6px 8px;color:var(--text);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.rt-num{width:36px}.rt-model{width:13%}.rt-reg{width:11%}.rt-type{width:9%}.rt-from{width:17%}.rt-to{width:17%}.rt-notes{width:16%}.rt-act{width:13%}
+.rt-reorder{display:flex;flex-direction:column;align-items:center;gap:0}
+.rt-up,.rt-down{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;line-height:1.2;padding:0 3px;transition:color .1s}
+.rt-up:hover,.rt-down:hover{color:var(--teal)}
+.rt-up:disabled,.rt-down:disabled{opacity:.25;cursor:default}
+.rt-n{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;min-width:14px}
+.rt-act-btns{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.btu-btn{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.btu-btn:hover{border-color:rgba(167,139,250,.4);color:var(--purple)}
+.btu-btn.on{border-color:rgba(167,139,250,.35);background:var(--purple-dim);color:var(--purple)}
+
+/* RUNS BOARD */
+.runs-scroll{flex:1;overflow-y:auto;padding:8px}
+.runs-scroll::-webkit-scrollbar{width:3px}
+.runs-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.run-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px;transition:border-color .15s}
+.run-card.selecting{border-color:rgba(0,201,167,.45);background:#121e1b}
+.run-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);gap:8px}
+.run-name{font-size:13px;font-weight:600;color:var(--text)}
+.run-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.run-count{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.run-driver-badge{font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;background:var(--teal-dim);color:var(--teal);cursor:pointer;transition:all .15s}
+.run-driver-badge:hover{background:rgba(0,201,167,.25)}
+.run-driver-badge.unassigned{background:var(--amber-dim);color:var(--amber)}
+.run-body{padding:6px}
+.run-job{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;margin-bottom:4px}
+.rj-order{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.rj-up,.rj-down{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;transition:color .15s}
+.rj-up:hover,.rj-down:hover{color:var(--teal)}
+.rj-num{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;min-width:14px}
+.rj-info{flex:1;min-width:0}
+.rj-model{font-size:12px;font-weight:500;color:var(--text)}
+.rj-route{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rj-note{font-size:10px;color:var(--amber)}
+.run-drop-hint{border:2px dashed rgba(0,201,167,.4);border-radius:6px;padding:10px;text-align:center;font-size:12px;color:var(--teal);animation:pulse 1s ease-in-out infinite;margin:4px}
+.run-tap-hint{border:2px dashed rgba(0,201,167,.4);border-radius:6px;padding:8px;text-align:center;font-size:11px;color:var(--teal);margin:4px 4px 0}
+
+/* DRIVER SELECTOR */
+.driver-selector{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.ds-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ds-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.ds-actions{display:flex;gap:6px;align-items:center}
+.ds-groups{display:flex;gap:12px}
+.ds-group{display:flex;flex-direction:column;gap:5px;flex:1}
+.ds-group-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding-left:2px}
+.ds-chips-row{display:flex;gap:4px;flex-wrap:wrap}
+.ds-chip{font-size:11px;font-weight:500;padding:4px 11px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s;user-select:none;white-space:nowrap}
+.ds-chip:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.ds-chip.active.truck{background:var(--teal-dim);color:var(--teal);border-color:rgba(0,201,167,.35)}
+.ds-chip.active.plater{background:var(--blue-dim);color:var(--blue);border-color:rgba(79,142,247,.35)}
+.ds-add-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px dashed var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.ds-add-btn:hover{border-color:var(--teal);color:var(--teal)}
+.ds-add-form{display:flex;gap:6px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.ds-add-form input{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;width:140px}
+.ds-add-form input:focus{border-color:var(--teal)}
+.ds-add-form select{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;color:var(--text);font-family:var(--font);font-size:12px;outline:none}
+
+/* DRIVER ASSIGN DROPDOWN */
+.driver-dropdown{position:absolute;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:4px;z-index:50;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.dd-item{padding:7px 10px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text);display:flex;align-items:center;gap:8px}
+.dd-item:hover{background:var(--surface2)}
+.dd-av{width:22px;height:22px;border-radius:50%;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* IN PROGRESS */
+.progress-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.progress-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.pc-head{padding:10px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.pc-name{font-size:13px;font-weight:600}
+.pc-role{font-size:10px;color:var(--muted)}
+.pc-jobs{padding:8px;display:flex;flex-direction:column;gap:5px}
+.pc-job{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+.pc-job.done{opacity:.45}
+.pc-job-model{font-size:12px;font-weight:500;margin-bottom:2px}
+.pc-job-route{font-size:11px;color:var(--muted)}
+.pc-job-chassis{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:3px}
+.pc-job-note{font-size:10px;color:var(--amber);margin-top:2px}
+.pc-job-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.progress-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--blue-dim);color:var(--blue);display:inline-block}
+.done-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--teal-dim);color:var(--teal);display:inline-block}
+
+/* SETTINGS */
+.settings-wrap{max-width:560px;padding:20px}
+.settings-section{margin-bottom:22px}
+.settings-title{font-size:14px;font-weight:600;margin-bottom:10px}
+.settings-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.settings-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:8px 11px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
+.settings-input:focus{border-color:var(--teal)}
+.settings-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
+.workflow-step{display:flex;gap:10px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.ws-num{width:20px;height:20px;border-radius:50%;background:var(--teal-dim);color:var(--teal);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal::-webkit-scrollbar{width:3px}
+.modal::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.modal-head{padding:15px 18px 11px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.modal-title{font-size:15px;font-weight:600}
+.modal-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.btn-close{background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0}
+.btn-close:hover{color:var(--text)}
+.modal-body{padding:14px 18px}
+.rc-header{background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.rc-name{font-size:15px;font-weight:600}
+.rc-date{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.rc-stats{display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.rc-stats strong{color:var(--teal)}
+.run-stop{display:flex;gap:10px;margin-bottom:12px}
+.rs-num{width:24px;height:24px;border-radius:50%;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,201,167,.3);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.rs-vehicle{font-size:13px;font-weight:600}
+.rs-chassis{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:3px}
+.rs-route{font-size:12px;color:var(--muted)}
+.rs-route b{color:var(--text);font-weight:500}
+.rs-arr{color:var(--teal);margin:0 4px}
+.rs-note{font-size:11px;color:var(--amber);background:var(--amber-dim);border-radius:4px;padding:3px 8px;margin-top:4px;display:block}
+.modal-foot{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.send-note{font-size:11px;color:var(--muted);padding:7px 12px;background:var(--surface2);border-radius:6px;margin:0 18px 10px;line-height:1.6}
+
+/* LOADING/EMPTY */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;gap:12px;color:var(--muted);font-size:13px}
+.spinner{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px}
+.empty-icon{font-size:28px;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">PTL<span>/</span>Planner</div>
+    <div class="date-pill" id="hdr-date"></div>
+  </div>
+  <div style="display:flex;gap:7px;align-items:center">
+    <div class="sync-btn" id="sync-btn" onclick="loadJobs()">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Connecting…</span>
+    </div>
+    <button class="btn btn-amber" onclick="genAll()">Generate all run cards</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" id="tab-plan" onclick="switchTab('plan')">Planning board <span class="tab-count tc-amber" id="tc-plan">—</span></div>
+  <div class="tab" id="tab-progress" onclick="switchTab('progress')">In Progress <span class="tab-count tc-blue" id="tc-progress">—</span></div>
+  <div class="tab" id="tab-settings" onclick="switchTab('settings')">⚙ Settings</div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val amber" id="s-unassigned">—</div><div class="stat-label">Unassigned</div></div>
+  <div class="stat"><div class="stat-val green" id="s-runs">—</div><div class="stat-label">Runs</div></div>
+  <div class="stat"><div class="stat-val blue" id="s-assigned">—</div><div class="stat-label">In runs</div></div>
+  <div class="stat"><div class="stat-val blue" id="s-progress">—</div><div class="stat-label">In progress</div></div>
+  <div class="stat"><div class="stat-val red" id="s-sla">—</div><div class="stat-label">SLA at risk</div></div>
+</div>
+
+<!-- PLANNING VIEW -->
+<div class="view active" id="view-plan">
+  <div class="plan-layout">
+
+    <!-- LEFT: JOB POOL -->
+    <div class="plan-left">
+      <div class="panel-hdr">
+        <div class="panel-title">Jobs</div>
+        <input class="search" placeholder="Search…" oninput="filterJobs(this.value)" id="job-search" />
+        <button class="filter-btn active" id="f-all" onclick="setStatusFilter('all')">All</button>
+        <button class="filter-btn f-amber" id="f-unplanned" onclick="setStatusFilter('unplanned')">Unplanned</button>
+        <button class="filter-btn" id="f-planned" onclick="setStatusFilter('planned')">Planned</button>
+        <button class="filter-btn" id="f-inunit" onclick="setStatusFilter('inunit')">In Unit</button>
+        <button class="filter-btn" id="f-samecol" onclick="toggleLocationFilter('col')">Same collection</button>
+        <button class="filter-btn" id="f-samedel" onclick="toggleLocationFilter('del')">Same delivery</button>
+        <span style="width:1px;height:16px;background:var(--border2);margin:0 2px;display:inline-block"></span>
+        <button class="filter-btn active" id="f-type-all" onclick="setTypeFilter('all')">All types</button>
+        <button class="filter-btn" id="f-type-trail" onclick="setTypeFilter('trailered')">Trailered</button>
+        <button class="filter-btn" id="f-type-driven" onclick="setTypeFilter('driven')">Driven</button>
+        <button class="zoom-btn" onclick="zoomJobs(-1)" title="Zoom out">−</button>
+        <button class="zoom-btn" onclick="zoomJobs(1)" title="Zoom in">+</button>
+      </div>
+      <div class="job-table-wrap">
+        <table class="job-table">
+          <thead>
+            <tr>
+              <th class="col-cust">Customer</th>
+              <th class="col-model">Model</th>
+              <th class="col-reg">Reg / Chassis</th>
+              <th class="col-type">Type</th>
+              <th class="col-from">Collection</th>
+              <th class="col-to">Delivery</th>
+              <th class="col-del">Req. del</th>
+              <th class="col-sla">SLA</th>
+            </tr>
+          </thead>
+          <tbody id="job-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT: RUNS BOARD -->
+    <div class="plan-right">
+      <div class="driver-selector" id="driver-selector">
+        <div class="ds-top">
+          <span class="ds-label">Drivers in today</span>
+          <div class="ds-actions">
+            <button class="btn btn-ghost btn-sm" onclick="selectAllDrivers()">Select all</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearAllDrivers()">Clear</button>
+            <button class="ds-add-btn" onclick="toggleAddDriver()">+ Add driver</button>
+          </div>
+        </div>
+        <div class="ds-groups">
+          <div class="ds-group">
+            <div class="ds-group-label">Truck drivers</div>
+            <div class="ds-chips-row" id="chips-truck"></div>
+          </div>
+          <div class="ds-group">
+            <div class="ds-group-label">Trade platers</div>
+            <div class="ds-chips-row" id="chips-plater"></div>
+          </div>
+        </div>
+        <div class="ds-add-form" id="add-driver-form" style="display:none">
+          <input id="new-driver-name" placeholder="Driver name" />
+          <select id="new-driver-type"><option value="truck">Truck driver</option><option value="plater">Trade plater</option></select>
+          <button class="btn btn-primary btn-sm" onclick="addNewDriver()">Add</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAddDriver()">Cancel</button>
+        </div>
+      </div>
+      <div class="panel-hdr">
+        <div class="panel-title">Runs</div>
+        <button class="btn btn-primary btn-sm" onclick="createRun()">+ New run</button>
+        <button class="zoom-btn" onclick="zoomRuns(-1)" title="Zoom out">−</button>
+        <button class="zoom-btn" onclick="zoomRuns(1)" title="Zoom in">+</button>
+      </div>
+      <div class="runs-scroll" id="runs-board"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- IN PROGRESS VIEW -->
+<div class="view" id="view-progress">
+  <div class="view-scroll">
+    <div id="progress-content"><div class="empty-state"><div class="empty-icon">🚛</div>Loading…</div></div>
+  </div>
+</div>
+
+<!-- SETTINGS VIEW -->
+<div class="view" id="view-settings">
+  <div class="view-scroll">
+    <div class="settings-wrap">
+      <div class="settings-section">
+        <div class="settings-title">Google Sheet connection</div>
+        <div class="settings-label">CSV URL</div>
+        <input class="settings-input" id="csv-url-input" placeholder="Paste your Google Sheets CSV publish URL…" />
+        <div class="settings-hint">File → Share → Publish to web → select month tab → CSV → Publish. Update each month.</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveSettings()">Save & reconnect</button>
+          <button class="btn btn-ghost" onclick="clearSavedUrl()">Reset to default</button>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)">Currently using: <span id="current-url-display" style="font-family:var(--mono);word-break:break-all"></span></div>
+        <button class="btn btn-ghost" style="margin-top:10px;font-size:11px" onclick="testConnection()">Test connection</button>
+        <div id="test-result" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border-radius:6px;padding:8px 10px;display:none"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">Workflow</div>
+        <div class="workflow-step"><div class="ws-num">1</div><div>Jobs pulled from Google Sheet (Planned + Un-Planned)</div></div>
+        <div class="workflow-step"><div class="ws-num">2</div><div>Create Runs on the right, drag jobs into them</div></div>
+        <div class="workflow-step"><div class="ws-num">3</div><div>Assign a driver to each Run</div></div>
+        <div class="workflow-step"><div class="ws-num">4</div><div>Generate run cards → copy → send via WhatsApp</div></div>
+        <div class="workflow-step"><div class="ws-num">5</div><div>Update job status to "In Progress" in the sheet → appears in In Progress tab</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL -->
+<div class="overlay hidden" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="modal-title" id="m-title"></div><div class="modal-sub" id="m-sub"></div></div>
+      <button class="btn-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="send-note">💡 After sending to the driver, update their job status to <strong>In Progress</strong> in the Google Sheet — it will appear in the In Progress tab on next sync.</div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" id="m-copy-btn" onclick="copyCard()">Copy to clipboard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT8F3WiXYYeouIE_2SM62HmpbXJWFkEk-AlgLrDHrBRBuYeWHIWoEysJRBVTCYHUH2iJ5_wgRimkfYG/pub?gid=2118353305&single=true&output=csv';
+const TODAY = new Date();
+document.getElementById('hdr-date').textContent = TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+document.getElementById('csv-url-input').value = getCsvUrl();
+
+const DRIVERS = [
+  {id:'rob',name:'Rob',type:'truck',av:'RB'},
+  {id:'valy',name:'Valy',type:'truck',av:'VY'},
+  {id:'steve',name:'Steve',type:'truck',av:'SV'},
+  {id:'jason',name:'Jason',type:'truck',av:'JS'},
+  {id:'craig',name:'Craig',type:'truck',av:'CR'},
+  {id:'mikec',name:'Mike C',type:'truck',av:'MC'},
+  {id:'garrey',name:'Garrey',type:'truck',av:'GR'},
+  {id:'cameron',name:'Cameron',type:'truck',av:'CM'},
+  {id:'costas',name:'Costas',type:'plater',av:'CO'},
+  {id:'mahmud',name:'Mahmud',type:'plater',av:'MH'},
+  {id:'rafael',name:'Rafael',type:'plater',av:'RF'},
+  {id:'luke',name:'Luke',type:'plater',av:'LK'},
+  {id:'romeo',name:'Romeo',type:'plater',av:'RM'},
+  {id:'mikeb',name:'Mike B',type:'plater',av:'MB'},
+  {id:'paul',name:'Paul',type:'plater',av:'PL'},
+  {id:'muqurab',name:'Muqurab',type:'plater',av:'MQ'},
+];
+
+let allJobs=[], runs=[], activeDrivers=new Set(DRIVERS.map(d=>d.id));
+let selectedJobId=null, filterText='', statusFilter='all', typeFilter='all', locFilter=null, locFilterVal='';
+let zoomLevel=1, runZoomLevel=1, currentTab='plan', autoTimer=null, jidCounter=0, runCounter=0;
+
+function getCsvUrl(){
+  const stored=localStorage.getItem('ptl_csv_url');
+  return(stored&&stored.trim()!=='')?stored:DEFAULT_CSV;
+}
+function saveSettings(){
+  const v=document.getElementById('csv-url-input').value.trim();
+  if(v){localStorage.setItem('ptl_csv_url',v);}
+  updateUrlDisplay();
+  switchTab('plan');loadJobs();
+}
+function clearSavedUrl(){
+  localStorage.removeItem('ptl_csv_url');
+  document.getElementById('csv-url-input').value=DEFAULT_CSV;
+  updateUrlDisplay();
+  loadJobs();
+}
+function updateUrlDisplay(){
+  const el=document.getElementById('current-url-display');
+  if(el)el.textContent=getCsvUrl().substring(0,80)+'…';
+}
+
+// CSV
+function parseCSVRow(line){
+  const res=[];let cur='';let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){res.push(cur);cur='';}else{cur+=c;}
+  }
+  res.push(cur);return res;
+}
+function parseCSV(text){
+  const lines=text.split('\n');
+  let hi=0;
+  for(let i=0;i<Math.min(5,lines.length);i++){if(lines[i].toLowerCase().includes('status')){hi=i;break;}}
+  const headers=parseCSVRow(lines[hi]).map(h=>h.trim().toLowerCase().replace(/[\s/]+/g,'_'));
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const r=parseCSVRow(lines[i]);
+    if(!r.length||!r[0]||!r[0].trim())continue;
+    const obj={};headers.forEach((h,idx)=>obj[h]=(r[idx]||'').trim());
+    rows.push(obj);
+  }
+  return rows;
+}
+function normStatus(s){
+  if(!s)return'';const v=s.toLowerCase().trim();
+  if(v.includes('un')&&v.includes('plan'))return'Un-Planned';
+  if(v==='unit'||v.includes('in unit')||v.includes('at unit'))return'In Unit';
+  if(v.includes('plan'))return'Planned';
+  if(v.includes('progress'))return'In Progress';
+  if(v.includes('complet'))return'Completed';
+  return s;
+}
+function normType(t){
+  if(!t)return'Driven';const v=t.toLowerCase();
+  if(v.includes('trail'))return'Trailered';
+  if(v.includes('sub'))return'Subcontractor';
+  return'Driven';
+}
+function parseDate(s){
+  if(!s)return null;
+  try{
+    if(s.includes('/'))return new Date(s.split('/').reverse().join('-'));
+    return new Date(s);
+  }catch(e){return null;}
+}
+function workingDaysDiff(from,to){
+  if(!from||!to)return null;
+  let d=new Date(from),count=0;
+  d.setHours(0,0,0,0);const e=new Date(to);e.setHours(0,0,0,0);
+  while(d<e){d.setDate(d.getDate()+1);const day=d.getDay();if(day!==0&&day!==6)count++;}
+  return count;
+}
+function slaInfo(job){
+  const booked=parseDate(job.date);
+  if(!booked)return{label:'',cls:''};
+  const days=workingDaysDiff(booked,TODAY);
+  if(days===null)return{label:'',cls:''};
+  if(days<=0)return{label:'Today',cls:'sla-ok'};
+  if(days===1)return{label:'Day 1',cls:'sla-ok'};
+  if(days===2)return{label:'Day 2',cls:'sla-warn'};
+  return{label:`Day ${days} ⚠`,cls:'sla-over'};
+}
+function fmtDate(s){
+  const d=parseDate(s);if(!d||isNaN(d))return s;
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+}
+function isDelOverdue(job){
+  const d=parseDate(job.req_del_date||job.req__del_date||'');
+  if(!d)return false;
+  return d<TODAY;
+}
+
+function csvToJobs(rows){
+  return rows.map(r=>{
+    const raw=r['status']||r['un-planned']||r['un_planned']||'';
+    const status=normStatus(raw);
+    const delDateRaw=r['req._del_date']||r['req_del_date']||r['req__del_date']||r['required_delivery_date']||'';
+    return{
+      id:jidCounter++,status,
+      model:r['vehicle_model']||r['model']||'—',
+      chassis:r['chassis_no']||r['chassis']||'',
+      type:normType(r['type/dept']||r['type_dept']||r['type']||''),
+      from:r['collection_address']||r['collection']||'',
+      to:r['delivery_address']||r['delivery']||'',
+      customer:r['customer']||'',
+      driver:r['driver']||'',
+      notes:r['notes']||'',
+      charge:r['invoice_chg']||r['invoice_charge']||'',
+      date:r['date']||'',
+      delDate:delDateRaw,
+      runId:null,
+    };
+  }).map(j=>{
+    // In Unit: collection displays as "Unit" in app only
+    if(j.status==='In Unit'){j.displayFrom='Unit';}
+    else{j.displayFrom=j.from;}
+    return j;
+  }).filter(j=>['Planned','Un-Planned','In Unit','In Progress'].includes(j.status));
+}
+
+async function loadJobs(){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  dot.className='sync-dot pulse';lbl.textContent='Syncing…';
+  const url=getCsvUrl();
+  if(!url||url.trim()===''){
+    dot.className='sync-dot error';
+    lbl.textContent='No URL set';
+    showBanner('error','⚠ No Google Sheets URL set — go to the Settings tab and paste your CSV URL');
+    return;
+  }
+  const saved={};
+  runs.forEach(run=>{
+    run.jobIds.forEach(jid=>{
+      const j=allJobs.find(x=>x.id===jid);
+      if(j)saved[j.chassis+'|'+j.from+'|'+j.to]={runId:run.id};
+    });
+  });
+  try{
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    if(text.includes('Host not in allowlist'))throw new Error('Host not in allowlist');
+    if(text.trim()==='')throw new Error('Empty response');
+    const rows=parseCSV(text);
+    if(!rows.length)throw new Error('No rows parsed');
+    const fresh=csvToJobs(rows);
+    runs.forEach(r=>r.jobIds=[]);
+    fresh.forEach(j=>{
+      const key=j.chassis+'|'+j.from+'|'+j.to;
+      if(saved[key]){
+        j.runId=saved[key].runId;
+        const run=runs.find(r=>r.id===saved[key].runId);
+        if(run)run.jobIds.push(j.id);
+      }
+    });
+    allJobs=fresh;
+    dot.className='sync-dot live';
+    lbl.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    hideBanner();
+    render();
+    if(autoTimer)clearTimeout(autoTimer);
+    autoTimer=setTimeout(loadJobs,60000);
+  }catch(e){
+    dot.className='sync-dot error';
+    const msg=e.message||'Unknown error';
+    lbl.textContent='Sync failed';
+    showBanner('error','⚠ Could not load jobs: '+msg+' — check Settings tab or try syncing again');
+    setTimeout(loadJobs,30000);
+  }
+}
+
+async function testConnection(){
+  const el=document.getElementById('test-result');
+  el.style.display='block';el.style.color='var(--muted)';
+  el.textContent='Testing…';
+  const url=getCsvUrl();
+  el.textContent='URL: '+url+'\n\nFetching…';
+  try{
+    const res=await fetch(url,{cache:'no-store'});
+    el.textContent='URL: '+url+'\n\nStatus: '+res.status+' '+res.statusText;
+    const text=await res.text();
+    el.textContent='URL: '+url+'\n\nStatus: '+res.status+'\nResponse length: '+text.length+' chars\nFirst 200 chars:\n'+text.substring(0,200);
+    el.style.color='var(--teal)';
+  }catch(e){
+    el.textContent='URL: '+url+'\n\nError: '+e.message;
+    el.style.color='var(--red)';
+  }
+}
+
+function showBanner(type,msg){
+  let b=document.getElementById('err-banner');
+  if(!b){
+    b=document.createElement('div');b.id='err-banner';
+    b.style.cssText='padding:8px 16px;font-size:12px;text-align:center;border-bottom:1px solid;';
+    document.querySelector('.tabs').after(b);
+  }
+  b.style.background=type==='error'?'var(--red-dim)':'var(--teal-dim)';
+  b.style.color=type==='error'?'var(--red)':'var(--teal)';
+  b.style.borderColor=type==='error'?'rgba(255,95,95,.2)':'rgba(0,201,167,.2)';
+  b.textContent=msg;b.style.display='block';
+}
+function hideBanner(){const b=document.getElementById('err-banner');if(b)b.style.display='none';}
+
+// DRIVER CHIPS
+function buildDriverChips(){
+  ['truck','plater'].forEach(type=>{
+    const c=document.getElementById('chips-'+type);
+    if(!c)return;
+    c.innerHTML='';
+    DRIVERS.filter(d=>d.type===type).forEach(d=>{
+      const chip=document.createElement('span');
+      chip.className='ds-chip '+type+(activeDrivers.has(d.id)?' active':'');
+      chip.textContent=d.name;
+      chip.title=d.type==='truck'?'Truck driver':'Trade plater';
+      chip.onclick=()=>{
+        if(activeDrivers.has(d.id))activeDrivers.delete(d.id);else activeDrivers.add(d.id);
+        buildDriverChips();
+      };
+      c.appendChild(chip);
+    });
+  });
+}
+function selectAllDrivers(){activeDrivers=new Set(DRIVERS.map(d=>d.id));buildDriverChips();}
+function clearAllDrivers(){activeDrivers.clear();buildDriverChips();}
+function toggleAddDriver(){
+  const f=document.getElementById('add-driver-form');
+  f.style.display=f.style.display==='none'?'flex':'none';
+  if(f.style.display==='flex')document.getElementById('new-driver-name').focus();
+}
+function addNewDriver(){
+  const name=document.getElementById('new-driver-name').value.trim();
+  const type=document.getElementById('new-driver-type').value;
+  if(!name)return;
+  const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
+  const av=name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  DRIVERS.push({id,name,type,av});
+  activeDrivers.add(id);
+  document.getElementById('new-driver-name').value='';
+  toggleAddDriver();
+  buildDriverChips();
+}
+
+// TABS
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='progress')renderProgress();
+}
+
+// FILTERS
+function setStatusFilter(f){
+  statusFilter=f;
+  ['all','unplanned','planned','inunit'].forEach(x=>{
+    const el=document.getElementById('f-'+x);
+    if(el)el.classList.toggle('active',x===f);
+  });
+  renderPool();
+}
+function setTypeFilter(f){
+  typeFilter=f;
+  ['all','trail','driven'].forEach(x=>{
+    const el=document.getElementById('f-type-'+x);
+    if(el)el.classList.toggle('active',x===f||(f==='all'&&x==='all'));
+  });
+  renderPool();
+}
+function toggleLocationFilter(type){
+  if(locFilter===type){locFilter=null;locFilterVal='';document.getElementById('f-samecol').classList.remove('active');document.getElementById('f-samedel').classList.remove('active');renderPool();return;}
+  // find most common location
+  const field=type==='col'?'from':'to';
+  const counts={};
+  allJobs.filter(j=>['Planned','Un-Planned'].includes(j.status)&&!j.runId).forEach(j=>{if(j[field])counts[j[field]]=(counts[j[field]]||0)+1;});
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  if(!top||top[1]<2){alert('No matching jobs found with the same location.');return;}
+  locFilter=type;locFilterVal=top[0];
+  document.getElementById('f-samecol').classList.toggle('active',type==='col');
+  document.getElementById('f-samedel').classList.toggle('active',type==='del');
+  renderPool();
+}
+function filterJobs(v){filterText=v.toLowerCase();renderPool();}
+
+// ZOOM
+function zoomJobs(dir){
+  zoomLevel=Math.max(0,Math.min(3,zoomLevel+dir));
+  renderPool();
+}
+
+// JOB CARD HTML
+function jobCardHTML(j,size){
+  const sla=slaInfo(j);
+  const typeCls=j.type==='Trailered'?'pill-trailer':j.type==='Subcontractor'?'pill-sub':'pill-driven';
+  const delRaw=j.delDate;
+  const delFmt=delRaw?fmtDate(delRaw):'';
+  const delOver=isDelOverdue(j);
+  const sizeCls=size==='sm'?'size-sm':size==='xs'?'size-xs':'';
+  return`<div class="jc-top">
+    <div>
+      <div class="jc-model ${sizeCls}">${j.model}</div>
+      <div class="jc-sub">
+        <span class="jc-customer">${j.customer}</span>
+        <span class="jc-reg">${j.chassis}</span>
+      </div>
+    </div>
+    <div class="jc-right">
+      <span class="type-pill ${typeCls}">${j.type}</span>
+      ${sla.label?`<span class="sla-pill ${sla.cls}">${sla.label}</span>`:''}
+    </div>
+  </div>
+  <div class="jc-route">
+    <div class="jc-from"><div class="jc-addr-lbl">Collection</div><div class="jc-addr-val ${sizeCls}">${j.from||'—'}</div></div>
+    <div class="jc-to"><div class="jc-addr-lbl">Delivery</div><div class="jc-addr-val ${sizeCls}">${j.to||'—'}</div></div>
+  </div>
+  <div class="jc-footer">
+    ${delFmt?`<span class="jc-del${delOver?' overdue':''}">📅 Del: ${delFmt}</span>`:''}
+    ${j.notes?`<span class="jc-note" title="${j.notes}">⚠ ${j.notes}</span>`:''}
+  </div>`;
+}
+
+// RENDER POOL
+function renderPool(){
+  const tbody=document.getElementById('job-tbody');
+  if(!tbody)return;
+  let jobs=allJobs.filter(j=>['Planned','Un-Planned','In Unit'].includes(j.status)&&!j.runId);
+  // Status filter
+  if(statusFilter==='unplanned')jobs=jobs.filter(j=>j.status==='Un-Planned');
+  else if(statusFilter==='planned')jobs=jobs.filter(j=>j.status==='Planned');
+  else if(statusFilter==='inunit')jobs=jobs.filter(j=>j.status==='In Unit');
+  // Type filter
+  if(typeFilter==='trailered')jobs=jobs.filter(j=>j.type==='Trailered');
+  else if(typeFilter==='driven')jobs=jobs.filter(j=>j.type!=='Trailered');
+  // Text search
+  if(filterText)jobs=jobs.filter(j=>[j.model,j.chassis,j.from,j.to,j.customer].join(' ').toLowerCase().includes(filterText));
+  // Location filter
+  if(locFilter){const field=locFilter==='col'?'from':'to';jobs=jobs.filter(j=>j[field]===locFilterVal);}
+  // Sort by date received (oldest first)
+  jobs.sort((a,b)=>{
+    const da=parseDate(a.date),db=parseDate(b.date);
+    if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;
+    return da-db;
+  });
+  const sz=zoomLevel===0?'size-xs':zoomLevel===1?'size-sm':'';
+  if(!allJobs.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)"><div class="spinner" style="margin:0 auto 10px"></div>Loading…</td></tr>';return;}
+  if(!jobs.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">No jobs to show</td></tr>';return;}
+  let html='';
+  // Section dividers only when not filtering by type
+  if(typeFilter==='all'){
+    const trailered=jobs.filter(j=>j.type==='Trailered');
+    const driven=jobs.filter(j=>j.type!=='Trailered');
+    const renderGroup=(group,label)=>{
+      if(!group.length)return;
+      html+=`<tr class="section-row"><td colspan="8">${label} — ${group.length} job${group.length!==1?'s':''}</td></tr>`;
+      group.forEach(j=>{ html+=jobRowHTML(j,sz); });
+    };
+    renderGroup(trailered,'Trailered');
+    renderGroup(driven,'Driven');
+  } else {
+    jobs.forEach(j=>{ html+=jobRowHTML(j,sz); });
+  }
+  tbody.innerHTML=html;
+}
+
+function jobRowHTML(j,sz){
+  const sla=slaInfo(j);
+  const typeCls=j.type==='Trailered'?'pill-trailer':j.type==='Subcontractor'?'pill-sub':'pill-driven';
+  const delFmt=j.delDate?fmtDate(j.delDate):'';
+  const delOver=isDelOverdue(j);
+  const isUnit=j.status==='In Unit';
+  const displayFrom=j.displayFrom||j.from||'—';
+  const rowCls=(selectedJobId===j.id?'row-selected':sla.cls==='sla-over'?'row-sla-over':sla.cls==='sla-warn'?'row-sla-warn':'');
+  const dateFmt=j.date?fmtDate(j.date):'';
+  return`<tr class="${rowCls}" onclick="tapJob(${j.id})" title="Received: ${dateFmt}">
+    <td class="td-muted ${sz}">${j.customer}</td>
+    <td class="${sz}"><span class="td-model ${sz}">${j.model}</span></td>
+    <td class="${sz}"><span class="td-reg">${j.chassis}</span></td>
+    <td class="${sz}"><span class="type-pill ${typeCls}">${j.type}</span>${isUnit?` <span class="sla-pill" style="background:var(--purple-dim);color:var(--purple);font-size:9px;padding:1px 5px">Unit</span>`:''}
+    </td>
+    <td class="${sz}" style="${isUnit?'color:var(--purple);font-weight:500':''}">${displayFrom}</td>
+    <td class="td-muted ${sz}">${j.to||'—'}</td>
+    <td class="${sz} ${delOver?'':'td-muted'}" style="${delOver?'color:var(--red)':''}">${delFmt||'—'}</td>
+    <td class="${sz}">${sla.label?`<span class="sla-pill ${sla.cls}">${sla.label}</span>`:''} ${j.notes?`<span class="jc-note" title="${j.notes}">⚠ ${j.notes}</span>`:''}</td>
+  </tr>`;
+}
+
+// SELECTION
+function tapJob(id){
+  selectedJobId=selectedJobId===id?null:id;
+  renderPool();renderRuns();
+}
+
+// RUNS
+function createRun(){
+  runCounter++;
+  runs.push({id:'run-'+runCounter,name:'Run '+runCounter,jobIds:[],driverId:null,completedIds:[]});
+  renderRuns();
+}
+
+function addJobToRun(jobId,runId){
+  const j=allJobs.find(x=>x.id===jobId);
+  const run=runs.find(r=>r.id===runId);
+  if(!j||!run||j.runId)return;
+  j.runId=runId;run.jobIds.push(jobId);
+  selectedJobId=null;renderPool();renderRuns();updateStats();
+}
+
+function toggleBringToUnit(jobId){
+  const j=allJobs.find(x=>x.id===jobId);
+  if(!j)return;
+  j.bringToUnit=!j.bringToUnit;
+  renderRuns();
+}
+
+function removeJobFromRun(jobId,runId){
+  const j=allJobs.find(x=>x.id===jobId);
+  const run=runs.find(r=>r.id===runId);
+  if(!j||!run)return;
+  j.runId=null;run.jobIds=run.jobIds.filter(id=>id!==jobId);
+  renderPool();renderRuns();updateStats();
+}
+
+function moveJob(runId,idx,dir){
+  const run=runs.find(r=>r.id===runId);if(!run)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=run.jobIds.length)return;
+  const tmp=run.jobIds[idx];run.jobIds[idx]=run.jobIds[newIdx];run.jobIds[newIdx]=tmp;
+  renderRuns();
+}
+
+function deleteRun(runId){
+  const run=runs.find(r=>r.id===runId);if(!run)return;
+  run.jobIds.forEach(jid=>{const j=allJobs.find(x=>x.id===jid);if(j)j.runId=null;});
+  runs=runs.filter(r=>r.id!==runId);
+  renderPool();renderRuns();updateStats();
+}
+
+let openPickerRunId=null;
+function assignDriverToRun(runId,e){
+  e.stopPropagation();
+  openPickerRunId=openPickerRunId===runId?null:runId;
+  renderRuns();
+}
+function setRunDriver(runId,driverId,e){
+  if(e)e.stopPropagation();
+  const run=runs.find(r=>r.id===runId);if(!run)return;
+  run.driverId=driverId;
+  openPickerRunId=null;
+  renderRuns();
+}
+function hideDropdown(){}
+
+function renderRuns(){
+  const board=document.getElementById('runs-board');
+  const isSel=selectedJobId!==null;
+  const sz=runZoomLevel===0?'xs':runZoomLevel===1?'sm':'';
+  const tdPad=sz==='xs'?'3px 6px':sz==='sm'?'5px 7px':'6px 8px';
+  const tdFont=sz==='xs'?'11px':sz==='sm'?'11px':'12px';
+  const modelFont=sz==='xs'?'11px':sz==='sm'?'12px':'13px';
+  if(!runs.length){
+    board.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div>No runs yet</div><div style="font-size:11px;margin-top:6px">Click "+ New run" to create one, then tap a job and tap the run to assign</div></div>';
+    return;
+  }
+  board.innerHTML='';
+  runs.forEach(run=>{
+    const runJobs=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
+    const div=document.createElement('div');
+    div.className='run-card'+(isSel?' selecting':'');
+    if(isSel)div.onclick=()=>{addJobToRun(selectedJobId,run.id);};
+
+    // Inline driver picker html
+    const pickerHTML=openPickerRunId===run.id?`<div style="padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;flex-wrap:wrap;gap:5px;align-items:center">
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">Assign:</span>
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);cursor:pointer" onclick="setRunDriver('${run.id}',null,event)">— None</span>
+      ${DRIVERS.filter(d=>activeDrivers.has(d.id)).map(d=>`<span style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);cursor:pointer;background:${run.driverId===d.id?'var(--teal-dim)':'transparent'};color:${run.driverId===d.id?'var(--teal)':'var(--muted)'}" onclick="setRunDriver('${run.id}','${d.id}',event)">${d.name}</span>`).join('')}
+    </div>`:'';
+
+    // Jobs table html
+    const tableHTML=runJobs.length===0?
+      (isSel?'<div class="run-tap-hint">Tap to add selected job here</div>':'<div style="padding:10px 12px;font-size:11px;color:var(--muted)">No jobs assigned yet</div>')
+      :`<table class="run-table">
+        <thead><tr>
+          <th class="rt-num">#</th>
+          <th class="rt-model">Model</th>
+          <th class="rt-reg">Reg</th>
+          <th class="rt-type">Type</th>
+          <th class="rt-from">Collection</th>
+          <th class="rt-to">Delivery</th>
+          <th class="rt-notes">Notes</th>
+          <th class="rt-act">Actions</th>
+        </tr></thead>
+        <tbody>${runJobs.map((j,i)=>{
+          const typeCls=j.type==='Trailered'?'pill-trailer':j.type==='Subcontractor'?'pill-sub':'pill-driven';
+          const displayFrom=j.displayFrom||j.from||'—';
+          const displayTo=j.bringToUnit?'Unit':j.to||'—';
+          const btuActive=j.bringToUnit;
+          return`<tr class="${btuActive?'btu-row':''}">
+            <td class="rt-num" style="padding:${tdPad}">
+              <div class="rt-reorder">
+                <button class="rt-up" onclick="event.stopPropagation();moveJob('${run.id}',${i},-1)" ${i===0?'disabled':''}>▲</button>
+                <span class="rt-n">${i+1}</span>
+                <button class="rt-down" onclick="event.stopPropagation();moveJob('${run.id}',${i},1)" ${i===runJobs.length-1?'disabled':''}>▼</button>
+              </div>
+            </td>
+            <td style="padding:${tdPad};font-size:${modelFont};font-weight:600">${j.model}</td>
+            <td style="padding:${tdPad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td>
+            <td style="padding:${tdPad}"><span class="type-pill ${typeCls}" style="font-size:10px;padding:1px 6px">${j.type}</span></td>
+            <td style="padding:${tdPad};font-size:${tdFont};color:var(--muted)">${displayFrom}</td>
+            <td class="td-to" style="padding:${tdPad};font-size:${tdFont};color:${btuActive?'var(--purple)':'var(--muted)'};font-weight:${btuActive?'500':'400'}">${displayTo}</td>
+            <td style="padding:${tdPad};font-size:10px;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?`⚠ ${j.notes}`:''}</td>
+            <td style="padding:${tdPad}">
+              <div class="rt-act-btns">
+                <button class="btu-btn ${btuActive?'on':''}" onclick="event.stopPropagation();toggleBringToUnit(${j.id})" title="Toggle bring to unit">→ Unit</button>
+                <button class="btn-x" onclick="event.stopPropagation();removeJobFromRun(${j.id},'${run.id}')" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1" title="Remove">×</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+        ${isSel?`<tr><td colspan="8"><div class="run-tap-hint" style="margin:4px">Tap to add another job</div></td></tr>`:''}
+        </tbody>
+      </table>`;
+
+    div.innerHTML=`
+      <div class="run-head">
+        <div class="run-name">${run.name}</div>
+        <div class="run-meta">
+          <span class="run-count">${runJobs.length} job${runJobs.length!==1?'s':''}</span>
+          <span class="run-driver-badge ${driver?'':'unassigned'}" onclick="assignDriverToRun('${run.id}',event)">
+            ${driver?driver.name:'Assign driver ▾'}
+          </span>
+          ${runJobs.length>0&&!isSel?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showRunCard('${run.id}')">Run card</button>`:''}
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRun('${run.id}')" title="Delete run">✕</button>
+        </div>
+      </div>
+      ${pickerHTML}
+      ${tableHTML}`;
+    board.appendChild(div);
+  });
+}
+
+
+function toggleZone(dId){
+  const z=document.getElementById('zone-'+dId);
+  if(z)z.style.display=z.style.display==='none'?'':'none';
+}
+
+function updateStats(){
+  const plan=allJobs.filter(j=>['Planned','Un-Planned','In Unit'].includes(j.status));
+  const unassigned=plan.filter(j=>!j.runId).length;
+  const inRuns=plan.filter(j=>j.runId).length;
+  const prog=allJobs.filter(j=>j.status==='In Progress').length;
+  const slaAt=plan.filter(j=>{const s=slaInfo(j);return s.cls==='sla-over';}).length;
+  document.getElementById('s-unassigned').textContent=unassigned;
+  document.getElementById('s-runs').textContent=runs.length;
+  document.getElementById('s-assigned').textContent=inRuns;
+  document.getElementById('s-progress').textContent=prog;
+  document.getElementById('s-sla').textContent=slaAt;
+  document.getElementById('tc-plan').textContent=plan.length;
+  document.getElementById('tc-progress').textContent=prog;
+}
+
+function render(){renderPool();renderRuns();updateStats();if(currentTab==='progress')renderProgress();}
+
+function showRunCard(runId){
+  const run=runs.find(r=>r.id===runId);if(!run)return;
+  const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
+  const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+  if(!rj.length){alert('No jobs in this run.');return;}
+  const trail=rj.filter(j=>j.type==='Trailered').length;
+  const ds=TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('m-title').textContent='Run card — '+run.name+(driver?' ('+driver.name+')':'');
+  document.getElementById('m-sub').textContent=ds;
+  document.getElementById('m-body').innerHTML=`
+    <div class="rc-header">
+      <div class="rc-name">${driver?driver.name:'Unassigned'} · ${run.name}</div>
+      <div class="rc-date">${ds}</div>
+      <div class="rc-stats">
+        <span><strong>${rj.length}</strong> jobs</span>
+        <span><strong>${trail}</strong> trailered</span>
+        <span><strong>${rj.length-trail}</strong> driven</span>
+      </div>
+    </div>
+    ${rj.map((j,i)=>`<div class="run-stop">
+      <div class="rs-num">${i+1}</div>
+      <div>
+        <div class="rs-vehicle">${j.model}${j.bringToUnit?` <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple);margin-left:4px">&#x2192; Bring to Unit</span>`:''}</div>
+        <div class="rs-chassis">${j.chassis} &middot; ${j.customer}</div>
+        <div class="rs-route"><b>${j.displayFrom||j.from}</b><span class="rs-arr">&#x2192;</span><b style="${j.bringToUnit?'color:var(--purple)':''}">${j.bringToUnit?'Unit':j.to}</b></div>
+        ${j.status==='In Unit'?'<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--purple-dim);color:var(--purple);display:inline-block;margin-top:3px">Starting from Unit</span>':''}
+        <span class="type-pill ${j.type==='Trailered'?'pill-trailer':j.type==='Subcontractor'?'pill-sub':'pill-driven'}" style="margin-top:4px;display:inline-block">${j.type}</span>
+        ${j.delDate?`<span style="font-size:10px;color:var(--blue);margin-left:5px">Del: ${fmtDate(j.delDate)}</span>`:''}
+        ${j.notes?`<span class="rs-note">&#x26A0; ${j.notes}</span>`:''}
+      </div>
+    </div>`).join('')}`;
+  document.getElementById('m-copy-btn').dataset.runid=runId;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function closeModal(){document.getElementById('overlay').classList.add('hidden');}
+
+function copyCard(){
+  const runId=document.getElementById('m-copy-btn').dataset.runid;
+  const run=runs.find(r=>r.id===runId);if(!run)return;
+  const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
+  const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+  const ds=TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  let txt='PTL RUN CARD — '+run.name+(driver?' | '+driver.name:'')+'\n'+ds+'\n'+'─'.repeat(36)+'\n'+rj.length+' jobs\n\n';
+  rj.forEach((j,i)=>{
+    txt+=(i+1)+'. '+j.model+' ('+j.chassis+') — '+j.customer+(j.bringToUnit?' [→ BRING TO UNIT]':'')+'\n';
+    txt+='   '+(j.displayFrom||j.from)+' → '+(j.bringToUnit?'Unit':j.to)+' ['+j.type+']\n';
+    if(j.delDate)txt+='   Del: '+fmtDate(j.delDate)+'\n';
+    if(j.notes)txt+='   ⚠ '+j.notes+'\n';
+    txt+='\n';
+  });
+  txt+='— Premier Travel Logistics';
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b=document.getElementById('m-copy-btn');
+    b.textContent='Copied ✓';b.style.background='#0a8a6b';
+    setTimeout(()=>{b.textContent='Copy to clipboard';b.style.background='';},2000);
+  });
+}
+
+function genAll(){
+  const activeRuns=runs.filter(r=>r.jobIds.length>0);
+  if(!activeRuns.length){alert('No runs have jobs yet.');return;}
+  const ds=TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  let txt='PTL DAILY RUN PLAN\n'+ds+'\n'+'═'.repeat(38)+'\n\n';
+  activeRuns.forEach(run=>{
+    const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
+    const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    txt+='▶ '+run.name.toUpperCase()+(driver?' — '+driver.name.toUpperCase():' — UNASSIGNED')+' ('+rj.length+' job'+(rj.length!==1?'s':'')+')\n';
+    rj.forEach((j,i)=>{
+      txt+='  '+(i+1)+'. '+j.model+' '+j.chassis+' · '+(j.displayFrom||j.from)+' → '+(j.bringToUnit?'Unit':j.to)+' ['+j.type+']'+(j.bringToUnit?' [→ BRING TO UNIT]':'')+(j.delDate?' Del:'+fmtDate(j.delDate):'')+(j.notes?' ⚠ '+j.notes:'')+'\n';
+    });
+    txt+='\n';
+  });
+  txt+='— Premier Travel Logistics';
+  navigator.clipboard.writeText(txt).then(()=>alert('✓ '+activeRuns.length+' run card'+(activeRuns.length!==1?'s':'')+' copied to clipboard!'));
+}
+
+function renderProgress(){
+  const c=document.getElementById('progress-content');
+  const pj=allJobs.filter(j=>j.status==='In Progress');
+  if(!pj.length){
+    c.innerHTML='<div class="empty-state"><div class="empty-icon">🚛</div><div>No jobs in progress</div><div style="font-size:11px;margin-top:6px;color:var(--muted)">Set status to "In Progress" in the spreadsheet and sync</div></div>';
+    return;
+  }
+  const byDriver={};
+  pj.forEach(j=>{const k=j.driver||'Unassigned';if(!byDriver[k])byDriver[k]=[];byDriver[k].push(j);});
+  c.innerHTML='<div class="progress-grid">'+Object.entries(byDriver).map(([driver,jobs])=>{
+    const d=DRIVERS.find(x=>x.name.toLowerCase()===driver.toLowerCase());
+    return'<div class="progress-card"><div class="pc-head"><div class="driver-av '+(d?.type==='truck'?'av-truck':'av-plater')+'" style="width:28px;height:28px;font-size:10px;border-radius:50%;font-weight:600;display:flex;align-items:center;justify-content:center;background:'+(d?.type==='truck'?'var(--teal-dim)':'var(--blue-dim)')+';color:'+(d?.type==='truck'?'var(--teal)':'var(--blue)')+'">'+( d?.av||driver.slice(0,2).toUpperCase())+'</div><div><div class="pc-name">'+driver+'</div><div class="pc-role">'+jobs.length+' job'+(jobs.length!==1?'s':'')+' in progress</div></div></div>'
+      +'<div class="pc-jobs">'+jobs.map(j=>'<div class="pc-job'+(j._done?' done':'')+'"><div class="pc-job-model">'+j.model+' <span class="type-pill '+(j.type==='Trailered'?'pill-trailer':'pill-driven')+'" style="font-size:10px;padding:1px 6px;margin-left:4px">'+j.type+'</span></div><div class="pc-job-chassis">'+j.chassis+'</div><div class="pc-job-route">'+j.from+' → '+j.to+'</div>'+(j.notes?'<div class="pc-job-note">⚠ '+j.notes+'</div>':'')+'<div class="pc-job-footer">'+(j._done?'<span class="done-badge">✓ Marked complete</span>':'<span class="progress-badge">🚛 In Progress</span>')+(j._done?'<span style="font-size:10px;color:var(--muted)">Update sheet too</span>':'<button class="btn btn-ghost btn-sm" onclick="markDone('+j.id+')">Mark complete</button>')+'</div></div>').join('')+'</div></div>';
+  }).join('')+'</div>';
+}
+
+function markDone(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  j._done=true;renderProgress();
+}
+
+// INIT
+buildDriverChips();
+updateUrlDisplay();
+loadJobs();
+</script>
+</body>
+</html>
