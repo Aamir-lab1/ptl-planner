@@ -59,13 +59,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .view{display:none;height:calc(100vh - 120px);overflow:hidden;flex-direction:column}
 .view.active{display:flex}
 .plan-layout{display:flex;flex:1;overflow:hidden}
-.plan-left{flex:0 0 50%;min-width:200px;max-width:80%}
-.plan-right{flex:1;min-width:200px}
+.plan-left{display:flex;flex-direction:column;flex:0 0 50%;min-width:200px;max-width:80%;overflow:hidden}
+.plan-right{display:flex;flex-direction:column;flex:1;min-width:200px;overflow:hidden}
 .divider{width:5px;background:var(--border2);cursor:col-resize;flex-shrink:0;transition:background .15s;position:relative}
 .divider:hover,.divider.dragging{background:var(--ptl)}
 .divider::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:30px;border-radius:2px;background:var(--muted);opacity:.5}
-.plan-left{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
-.plan-right{display:flex;flex-direction:column;overflow:hidden}
 .panel-hdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;background:var(--surface)}
 .panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
 .search{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;width:120px}
@@ -76,7 +74,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .filter-btn.f-amber.active{background:var(--amber-dim);color:var(--amber);border-color:rgba(245,166,35,.3)}
 .zoom-btn{font-size:14px;width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s}
 .zoom-btn:hover{color:var(--text)}
-.job-table-wrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+.job-table-wrap{flex:1;overflow-x:scroll;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .job-table-wrap::-webkit-scrollbar{width:6px;height:6px}
 .job-table-wrap::-webkit-scrollbar-thumb{background:var(--muted);border-radius:3px}
 .job-table-wrap::-webkit-scrollbar-track{background:var(--surface2)}
@@ -494,7 +492,7 @@ function airtableToJobs(records){
       to:get('Delivery Location'),
       customer:get('Customer'),
       driver:get('Driver','driver'),
-      notes:get('Invoice Text'),
+      notes:get('Notes','Invoice Text'),
       charge:get('Movement Charge','Total Charge'),
       date:get('Date Booked'),
       delDate:get('Deadline date'),
@@ -609,7 +607,8 @@ function zoomRuns(dir){runZoomLevel=Math.max(0,Math.min(3,runZoomLevel+dir));ren
 function buildDriverChips(){
   ['truck','plater'].forEach(type=>{
     const c=document.getElementById('chips-'+type);if(!c)return;c.innerHTML='';
-    DRIVERS.filter(d=>d.type===type).forEach(d=>{const chip=document.createElement('span');chip.className='ds-chip '+type+(activeDrivers.has(d.id)?' active':'');chip.textContent=d.name;chip.onclick=()=>{if(activeDrivers.has(d.id))activeDrivers.delete(d.id);else activeDrivers.add(d.id);(function(){
+    DRIVERS.filter(d=>d.type===type).forEach(d=>{const chip=document.createElement('span');chip.className='ds-chip '+type+(activeDrivers.has(d.id)?' active':'');chip.textContent=d.name;chip.onclick=()=>{if(activeDrivers.has(d.id))activeDrivers.delete(d.id);else activeDrivers.add(d.id);window.addEventListener('load',function(){
+(function(){
   const divider=document.getElementById('plan-divider');
   const left=divider?divider.previousElementSibling:null;
   if(!divider||!left)return;
@@ -642,6 +641,7 @@ function buildDriverChips(){
   },{passive:true});
   document.addEventListener('touchend',()=>{dragging=false;divider.classList.remove('dragging');});
 })();
+});
 buildDriverChips();};c.appendChild(chip);});
   });
 }
