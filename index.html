@@ -454,14 +454,7 @@ async function testConnection(){
   }catch(e){el.textContent='Error: '+e.message;el.style.color='var(--red)';}
 }
 
-function saveSettings(){const v=document.getElementById('csv-url-input').value.trim();if(v)localStorage.setItem('ptl_csv_url',v);updateUrlDisplay();switchMainTab('plan');loadJobs();}
-function clearSavedUrl(){localStorage.removeItem('ptl_csv_url');document.getElementById('csv-url-input').value=DEFAULT_CSV;updateUrlDisplay();loadJobs();}
-function updateUrlDisplay(){const el=document.getElementById('current-url-display');if(el)el.textContent=getCsvUrl().substring(0,80)+'...';}
-async function testConnection(){
-  const el=document.getElementById('test-result');el.style.display='block';el.style.color='var(--muted)';el.textContent='Testing...';
-  try{const res=await fetch(getCsvUrl(),{cache:'no-store'});const text=await res.text();el.textContent='Status: '+res.status+'\nLength: '+text.length+' chars\nPreview:\n'+text.substring(0,200);el.style.color='var(--ptl)';}
-  catch(e){el.textContent='Error: '+e.message;el.style.color='var(--red)';}
-}
+
 function parseCSVRow(line){const res=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){res.push(cur);cur='';}else{cur+=c;}}res.push(cur);return res;}
 function parseCSV(text){
   const lines=text.split('\n');let hi=0;
