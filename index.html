@@ -58,7 +58,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
 .view{display:none;height:calc(100vh - 120px);overflow:hidden;flex-direction:column}
 .view.active{display:flex}
-.plan-layout{display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden}
+.plan-layout{display:flex;flex:1;overflow:hidden}
+.plan-left{flex:0 0 50%;min-width:200px;max-width:80%}
+.plan-right{flex:1;min-width:200px}
+.divider{width:5px;background:var(--border2);cursor:col-resize;flex-shrink:0;transition:background .15s;position:relative}
+.divider:hover,.divider.dragging{background:var(--ptl)}
+.divider::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:30px;border-radius:2px;background:var(--muted);opacity:.5}
 .plan-left{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
 .plan-right{display:flex;flex-direction:column;overflow:hidden}
 .panel-hdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;background:var(--surface)}
@@ -72,9 +77,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .zoom-btn{font-size:14px;width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s}
 .zoom-btn:hover{color:var(--text)}
 .job-table-wrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
-.job-table-wrap::-webkit-scrollbar{width:5px;height:5px}
-.job-table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.job-table-wrap::-webkit-scrollbar{width:6px;height:6px}
+.job-table-wrap::-webkit-scrollbar-thumb{background:var(--muted);border-radius:3px}
 .job-table-wrap::-webkit-scrollbar-track{background:var(--surface2)}
+.job-table-wrap::-webkit-scrollbar-corner{background:var(--surface2)}
 .job-table{width:max-content;min-width:100%;border-collapse:collapse;table-layout:auto}
 .job-table thead{position:sticky;top:0;z-index:5}
 .job-table thead tr{background:var(--surface);border-bottom:1px solid var(--border2)}
@@ -287,6 +293,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
         </table>
       </div>
     </div>
+    <div class="divider" id="plan-divider"></div>
     <div class="plan-right">
       <div class="driver-selector">
         <div class="ds-top">
@@ -602,7 +609,40 @@ function zoomRuns(dir){runZoomLevel=Math.max(0,Math.min(3,runZoomLevel+dir));ren
 function buildDriverChips(){
   ['truck','plater'].forEach(type=>{
     const c=document.getElementById('chips-'+type);if(!c)return;c.innerHTML='';
-    DRIVERS.filter(d=>d.type===type).forEach(d=>{const chip=document.createElement('span');chip.className='ds-chip '+type+(activeDrivers.has(d.id)?' active':'');chip.textContent=d.name;chip.onclick=()=>{if(activeDrivers.has(d.id))activeDrivers.delete(d.id);else activeDrivers.add(d.id);buildDriverChips();};c.appendChild(chip);});
+    DRIVERS.filter(d=>d.type===type).forEach(d=>{const chip=document.createElement('span');chip.className='ds-chip '+type+(activeDrivers.has(d.id)?' active':'');chip.textContent=d.name;chip.onclick=()=>{if(activeDrivers.has(d.id))activeDrivers.delete(d.id);else activeDrivers.add(d.id);(function(){
+  const divider=document.getElementById('plan-divider');
+  const left=divider?divider.previousElementSibling:null;
+  if(!divider||!left)return;
+  let dragging=false,startX=0,startW=0;
+  divider.addEventListener('mousedown',e=>{
+    dragging=true;startX=e.clientX;startW=left.offsetWidth;
+    divider.classList.add('dragging');
+    document.body.style.userSelect='none';
+    document.body.style.cursor='col-resize';
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    const dx=e.clientX-startX;
+    const total=left.parentElement.offsetWidth;
+    const newW=Math.min(Math.max(startW+dx,200),total-200);
+    left.style.flex='0 0 '+newW+'px';
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!dragging)return;
+    dragging=false;divider.classList.remove('dragging');
+    document.body.style.userSelect='';document.body.style.cursor='';
+  });
+  divider.addEventListener('touchstart',e=>{dragging=true;startX=e.touches[0].clientX;startW=left.offsetWidth;},{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!dragging)return;
+    const dx=e.touches[0].clientX-startX;
+    const total=left.parentElement.offsetWidth;
+    const newW=Math.min(Math.max(startW+dx,200),total-200);
+    left.style.flex='0 0 '+newW+'px';
+  },{passive:true});
+  document.addEventListener('touchend',()=>{dragging=false;divider.classList.remove('dragging');});
+})();
+buildDriverChips();};c.appendChild(chip);});
   });
 }
 function selectAllDrivers(){activeDrivers=new Set(DRIVERS.map(d=>d.id));buildDriverChips();}
@@ -628,7 +668,7 @@ function renderPool(){
   const mkRow=j=>{
     const sla=slaInfo(j);const tc=j.type==='Trailered'?'pill-trailer':j.type==='Subcontractor'?'pill-sub':'pill-driven';
     const delOver=isDelOverdue(j);const rc=selectedJobId===j.id?'row-selected':sla.cls==='sla-over'?'row-sla-over':sla.cls==='sla-warn'?'row-sla-warn':'';
-    return`<tr class="${rc}" onclick="tapJob(${j.id})">
+    return`<tr class="${rc}" onclick="tapJob('${j.id}')">
       <td style="padding:${pad};font-size:${font};color:var(--muted)">${j.customer}</td>
       <td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td>
       <td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td>
@@ -674,7 +714,7 @@ function renderRuns(){
     const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
     const div=document.createElement('div');
     div.className='run-card'+(isSel?' selecting':'');
-    if(isSel)div.onclick=()=>addJobToRun(selectedJobId,run.id);
+    if(isSel)div.onclick=(e)=>{e.stopPropagation();addJobToRun(selectedJobId,run.id);};
     const pickerHTML=openPickerRunId===run.id?`<div class="inline-picker"><span style="font-size:11px;color:var(--muted)">Assign:</span><span class="picker-chip" onclick="setRunDriver('${run.id}',null,event)">- None</span>${DRIVERS.filter(d=>activeDrivers.has(d.id)).map(d=>`<span class="picker-chip${run.driverId===d.id?' sel':''}" onclick="setRunDriver('${run.id}','${d.id}',event)">${d.name}</span>`).join('')}</div>`:'';
     const tableHTML=rj.length===0?(isSel?'<div class="run-drop-hint">Tap to add selected job here</div>':'<div style="padding:10px 12px;font-size:11px;color:var(--muted)">No jobs yet</div>'):`<table class="run-table"><thead><tr><th style="width:36px">#</th><th style="width:13%">Model</th><th style="width:11%">Reg</th><th style="width:9%">Type</th><th style="width:17%">Collection</th><th style="width:17%">Delivery</th><th style="width:18%">Notes</th><th style="width:13%">Actions</th></tr></thead><tbody>${rj.map((j,i)=>{const tc=j.type==='Trailered'?'pill-trailer':j.type==='Subcontractor'?'pill-sub':'pill-driven';return`<tr><td style="padding:${pad}"><div class="rt-reorder"><button class="rt-up" onclick="event.stopPropagation();moveJob('${run.id}',${i},-1)" ${i===0?'disabled':''}>&#9650;</button><span class="rt-n">${i+1}</span><button class="rt-down" onclick="event.stopPropagation();moveJob('${run.id}',${i},1)" ${i===rj.length-1?'disabled':''}>&#9660;</button></div></td><td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td><td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="padding:${pad}"><span class="type-pill ${tc}" style="font-size:10px;padding:1px 6px">${j.type}</span></td><td style="padding:${pad};font-size:${font};color:${j.status==='In Unit'?'var(--purple)':'var(--muted)'};">${j.displayFrom||j.from||'-'}</td><td style="padding:${pad};font-size:${font};color:${j.bringToUnit?'var(--purple)':'var(--muted)'};">${j.bringToUnit?'Unit':j.to||'-'}</td><td style="padding:${pad};font-size:10px;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td style="padding:${pad}"><div class="rt-act-btns"><button class="btu-btn${j.bringToUnit?' on':''}" onclick="event.stopPropagation();toggleBringToUnit(${j.id})">&#8594; Unit</button><button onclick="event.stopPropagation();removeJobFromRun(${j.id},'${run.id}')" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1">&#215;</button></div></td></tr>`;}).join('')}${isSel?`<tr><td colspan="8"><div class="run-tap-hint">Tap to add another job</div></td></tr>`:''}</tbody></table>`;
     div.innerHTML=`<div class="run-head"><div class="run-name">${run.name} <span style="font-size:10px;font-weight:400;color:var(--muted)">${DAY_NAMES[currentDay]}</span></div><div class="run-meta"><span class="run-count">${rj.length} job${rj.length!==1?'s':''}</span><span class="run-driver-badge${driver?'':' unassigned'}" onclick="assignDriverToRun('${run.id}',event)">${driver?driver.name:'Assign driver'}</span>${rj.length>0&&!isSel?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showRunCard('${run.id}')">Run card</button>`:''}<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();exportRunPDFById('${run.id}')">PDF</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRun('${run.id}')">&#215;</button></div></div>${pickerHTML}${tableHTML}`;
