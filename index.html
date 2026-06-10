@@ -71,10 +71,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .filter-btn.f-amber.active{background:var(--amber-dim);color:var(--amber);border-color:rgba(245,166,35,.3)}
 .zoom-btn{font-size:14px;width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s}
 .zoom-btn:hover{color:var(--text)}
-.job-table-wrap{flex:1;overflow:auto}
-.job-table-wrap::-webkit-scrollbar{width:3px;height:3px}
+.job-table-wrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+.job-table-wrap::-webkit-scrollbar{width:5px;height:5px}
 .job-table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.job-table{width:max-content;min-width:100%;border-collapse:collapse}
+.job-table-wrap::-webkit-scrollbar-track{background:var(--surface2)}
+.job-table{width:max-content;min-width:100%;border-collapse:collapse;table-layout:auto}
 .job-table thead{position:sticky;top:0;z-index:5}
 .job-table thead tr{background:var(--surface);border-bottom:1px solid var(--border2)}
 .job-table thead th{padding:7px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;min-width:100px}
@@ -269,17 +270,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
         <table class="job-table">
           <thead>
             <tr>
-              <th style="min-width:130px">Customer</th>
-              <th style="min-width:100px">Model</th>
-              <th style="min-width:110px">Reg/Chassis</th>
-              <th style="min-width:90px">Type</th>
-              <th style="min-width:160px">Collection</th>
-              <th style="min-width:160px">Delivery</th>
-              <th style="min-width:110px">Avail. From</th>
-              <th style="min-width:90px">Req. Del</th>
-              <th style="min-width:70px">SLA</th>
-              <th style="min-width:130px">Confirmed By</th>
-              <th style="min-width:180px">Notes</th>
+              <th style="min-width:110px">Customer</th>
+              <th style="min-width:80px">Model</th>
+              <th style="min-width:90px">Reg/Chassis</th>
+              <th style="min-width:80px">Type</th>
+              <th style="min-width:130px">Collection</th>
+              <th style="min-width:130px">Delivery</th>
+              <th style="min-width:90px">Avail. From</th>
+              <th style="min-width:80px">Req. Del</th>
+              <th style="min-width:60px">SLA</th>
+              <th style="min-width:110px">Confirmed By</th>
+              <th style="min-width:150px">Notes</th>
             </tr>
           </thead>
           <tbody id="job-tbody"></tbody>
@@ -453,7 +454,17 @@ async function testConnection(){
   }catch(e){el.textContent='Error: '+e.message;el.style.color='var(--red)';}
 }
 
-function normStatus(s){if(!s)return'';const v=s.toLowerCase().trim();if(v.includes('un')&&v.includes('plan'))return'Un-Planned';if(v==='unit'||v.includes('in unit')||v.includes('at unit'))return'In Unit';if(v.includes('plan'))return'Planned';if(v.includes('progress'))return'In Progress';if(v.includes('complet'))return'Completed';return s;}
+function normStatus(s){
+  if(!s)return'';
+  const v=s.toLowerCase().trim();
+  if(v==='unit'||v.includes('in unit')||v.includes('at unit'))return'In Unit';
+  if(v.includes('un')&&v.includes('plan'))return'Un-Planned';
+  if(v==='unplanned'||v==='un planned'||v==='not planned')return'Un-Planned';
+  if(v.includes('in progress')||v.includes('progress'))return'In Progress';
+  if(v.includes('complet'))return'Completed';
+  if(v.includes('plan'))return'Planned';
+  return s;
+}
 function normType(t){if(!t)return'Driven';const v=t.toLowerCase();if(v.includes('trail'))return'Trailered';if(v.includes('sub'))return'Subcontractor';return'Driven';}
 function parseDate(s){if(!s)return null;try{if(s.includes('/'))return new Date(s.split('/').reverse().join('-'));return new Date(s);}catch(e){return null;}}
 function fmtDate(s){const d=parseDate(s);if(!d||isNaN(d))return s;return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
@@ -463,26 +474,25 @@ function isDelOverdue(job){const d=parseDate(job.delDate);if(!d)return false;ret
 function airtableToJobs(records){
   return records.map(r=>{
     const f=r.fields;
-    // Normalise field names - handle various casings
     const get=(...keys)=>{for(const k of keys){const v=f[k];if(v!==undefined&&v!==null&&v!=='')return String(v);}return '';};
-    const status=normStatus(get('Status','status','Un-Planned','Unplanned'));
+    const status=normStatus(get('Status'));
     const j={
-      id:r.id, // Use Airtable record ID
+      id:r.id,
       airtableId:r.id,
       status,
-      model:get('Vehicle Model','Model','vehicle_model','Vehicle'),
-      chassis:get('Chassis No','Chassis','Reg','Registration','chassis_no'),
-      type:normType(get('Type/Dept','Type','Movement Type','type')),
-      from:get('Collection Address','Collection','collection_address','From'),
-      to:get('Delivery Address','Delivery','delivery_address','To'),
-      customer:get('Customer','Customer Name','customer'),
+      model:get('Vehicle Model'),
+      chassis:get('Reg/Vin'),
+      type:normType(get('Movement Type')),
+      from:get('Collection Location'),
+      to:get('Delivery Location'),
+      customer:get('Customer'),
       driver:get('Driver','driver'),
-      notes:get('Notes','notes','Note'),
-      charge:get('Invoice Chg','Invoice Charge','Charge','charge'),
-      date:get('Date','Booking Date','date','Created'),
-      delDate:get('Req. Del Date','Required Delivery Date','Delivery Date','req_del_date'),
-      availFrom:get('Collection Available From','Available From','Avail From','avail_from'),
-      confirmedBy:get('Confirmed By','confirmed_by','Confirmed'),
+      notes:get('Invoice Text'),
+      charge:get('Movement Charge','Total Charge'),
+      date:get('Date Booked'),
+      delDate:get('Deadline date'),
+      availFrom:get(''),
+      confirmedBy:get('Confirmed By'),
       runId:null,runDay:null,bringToUnit:false,_done:false,
     };
     if(j.status==='In Unit')j.displayFrom='Unit';else j.displayFrom=j.from;
@@ -587,7 +597,7 @@ function toggleLocFilter(type){
   renderPool();
 }
 function filterJobs(v){filterText=v.toLowerCase();renderPool();}
-function zoomJobs(dir){zoomLevel=Math.max(0,Math.min(3,zoomLevel+dir));renderPool();}
+function zoomJobs(dir){zoomLevel=Math.max(0,Math.min(4,zoomLevel+dir));renderPool();}
 function zoomRuns(dir){runZoomLevel=Math.max(0,Math.min(3,runZoomLevel+dir));renderRuns();}
 function buildDriverChips(){
   ['truck','plater'].forEach(type=>{
@@ -610,9 +620,9 @@ function renderPool(){
   if(filterText)jobs=jobs.filter(j=>[j.model,j.chassis,j.from,j.to,j.customer,j.notes,j.confirmedBy].join(' ').toLowerCase().includes(filterText));
   if(locFilter){const field=locFilter==='col'?'from':'to';jobs=jobs.filter(j=>j[field]===locFilterVal);}
   jobs.sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return da-db;});
-  const pad=zoomLevel===0?'3px 8px':zoomLevel===1?'5px 8px':'7px 10px';
-  const font=zoomLevel===0?'11px':zoomLevel===1?'11px':'12px';
-  const mfont=zoomLevel===0?'11px':zoomLevel===1?'12px':'13px';
+  const pad=zoomLevel===0?'2px 5px':zoomLevel===1?'3px 7px':zoomLevel===2?'5px 8px':'7px 10px';
+  const font=zoomLevel===0?'10px':zoomLevel===1?'11px':zoomLevel===2?'11px':'12px';
+  const mfont=zoomLevel===0?'10px':zoomLevel===1?'11px':zoomLevel===2?'12px':'13px';
   if(!allJobs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--muted)"><div class="spinner" style="margin:0 auto 10px"></div>Loading...</td></tr>';return;}
   if(!jobs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--muted)">No jobs to show</td></tr>';return;}
   const mkRow=j=>{
