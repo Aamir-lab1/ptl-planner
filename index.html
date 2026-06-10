@@ -51,11 +51,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
 .view{display:none;height:calc(100vh - 120px);overflow:hidden;flex-direction:column}.view.active{display:flex}
 .plan-layout{display:flex;flex:1;overflow:hidden}
-.plan-left{display:flex;flex-direction:column;flex:0 0 50%;min-width:200px;max-width:80%;overflow:hidden}
+.plan-left{display:flex;flex-direction:column;flex:0 0 50%;min-width:0;max-width:80%;overflow:hidden}
 .plan-right{display:flex;flex-direction:column;flex:1;min-width:200px;overflow:hidden}
-.divider{width:5px;background:var(--border2);cursor:col-resize;flex-shrink:0;transition:background .15s;position:relative}
-.divider:hover,.divider.dragging{background:var(--ptl)}
-.divider::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:30px;border-radius:2px;background:var(--muted);opacity:.5}
+.divider{width:8px;background:var(--surface);cursor:col-resize;flex-shrink:0;transition:background .15s;position:relative;border-left:1px solid var(--border2);border-right:1px solid var(--border2)}
+.divider:hover,.divider.dragging{background:var(--ptl-dim);border-color:var(--ptl)}
+.divider::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:40px;border-radius:1px;background:var(--muted);opacity:.6}
+.divider::after{content:'';position:absolute;top:calc(50% - 6px);left:50%;transform:translate(-50%,-50%);width:2px;height:40px;border-radius:1px;background:var(--muted);opacity:.6}
+.divider:hover::before,.divider:hover::after,.divider.dragging::before,.divider.dragging::after{background:var(--ptl);opacity:1}
 .panel-hdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;background:var(--surface)}
 .panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
 .search{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;width:120px}
@@ -65,12 +67,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .filter-btn.f-amber.active{background:var(--amber-dim);color:var(--amber);border-color:rgba(245,166,35,.3)}
 .zoom-btn{font-size:14px;width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s}
 .zoom-btn:hover{color:var(--text)}
-.job-table-wrap{flex:1;overflow-x:scroll;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.job-table-wrap::-webkit-scrollbar{width:6px;height:8px}
-.job-table-wrap::-webkit-scrollbar-thumb{background:var(--muted);border-radius:3px}
-.job-table-wrap::-webkit-scrollbar-track{background:var(--surface2)}
+.job-table-wrap{flex:1;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;position:relative}
+.job-table-wrap::-webkit-scrollbar{width:8px;height:10px}
+.job-table-wrap::-webkit-scrollbar-thumb{background:#555;border-radius:4px;border:1px solid var(--surface2)}
+.job-table-wrap::-webkit-scrollbar-thumb:hover{background:#777}
+.job-table-wrap::-webkit-scrollbar-track{background:var(--surface2);border-radius:4px}
 .job-table-wrap::-webkit-scrollbar-corner{background:var(--surface2)}
-.job-table{width:max-content;min-width:100%;border-collapse:collapse;table-layout:auto}
+.job-table{min-width:1200px;border-collapse:collapse;table-layout:auto}
 .job-table thead{position:sticky;top:0;z-index:5}
 .job-table thead tr{background:var(--surface);border-bottom:1px solid var(--border2)}
 .job-table thead th{padding:7px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;min-width:80px}
@@ -683,10 +686,17 @@ async function loadJobs(){
   const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-label');
   dot.className='sync-dot pulse';lbl.textContent='Syncing...';
   const saved={},jobOrder={},btuFlags={};
+  const returnLegs={};
   DAYS.forEach(day=>dayRuns[day].forEach(run=>{
     run.jobIds.forEach((jid,idx)=>{
       const j=allJobs.find(x=>x.id===jid);
-      if(j){const key=j.airtableId;saved[key]={runId:run.id,runDay:day};jobOrder[key]=idx;if(j.bringToUnit)btuFlags[key]=true;}
+      if(j){
+        const key=j.airtableId;
+        saved[key]={runId:run.id,runDay:day};
+        jobOrder[key]=idx;
+        if(j.bringToUnit)btuFlags[key]=true;
+        if(j.returnLeg)returnLegs[key]=j.returnLeg;
+      }
     });
   }));
   try{
@@ -706,6 +716,7 @@ async function loadJobs(){
       if(saved[key]){
         j.runId=saved[key].runId;j.runDay=saved[key].runDay;
         if(btuFlags[key])j.bringToUnit=true;
+        if(returnLegs[key])j.returnLeg=returnLegs[key];
         toPlace.push({j,idx:jobOrder[key]??999,runId:saved[key].runId,runDay:saved[key].runDay});
       }
     });
@@ -840,7 +851,32 @@ function addJobToRun(jobId,runId){const j=allJobs.find(x=>x.id===jobId);const ru
 function removeJobFromRun(jobId,runId){const j=allJobs.find(x=>x.id===jobId);if(!j)return;const day=j.runDay||currentDay;const run=dayRuns[day]&&dayRuns[day].find(r=>r.id===runId);if(run)run.jobIds=run.jobIds.filter(id=>id!==jobId);j.runId=null;j.runDay=null;render();}
 function moveJob(runId,idx,dir){const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;const ni=idx+dir;if(ni<0||ni>=run.jobIds.length)return;const tmp=run.jobIds[idx];run.jobIds[idx]=run.jobIds[ni];run.jobIds[ni]=tmp;renderRuns();}
 function deleteRun(runId){const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;run.jobIds.forEach(jid=>{const j=allJobs.find(x=>x.id===jid);if(j){j.runId=null;j.runDay=null;}});dayRuns[currentDay]=dayRuns[currentDay].filter(r=>r.id!==runId);render();}
-function toggleBringToUnit(jobId){const j=allJobs.find(x=>x.id===jobId);if(!j)return;j.bringToUnit=!j.bringToUnit;renderRuns();}
+function toggleBringToUnit(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  j.bringToUnit=!j.bringToUnit;
+  if(!j.bringToUnit&&j.returnLeg){j.returnLeg=null;} // Clear return leg if un-toggling
+  renderRuns();
+}
+function planReturn(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  showConfirm('Plan return delivery','Which day should <b>'+j.model+'</b> be delivered from Unit to <b>'+j.to+'</b>?',
+    DAYS.filter(d=>d!==j.runDay).map(d=>({label:DAY_NAMES[d],cls:'btn-ghost',action:()=>{
+      // Create a run on that day if none exists
+      if(!dayRuns[d].length){runCounter++;dayRuns[d].push({id:'run-'+runCounter,name:'Run '+runCounter,jobIds:[],driverId:null});}
+      const targetRun=dayRuns[d][0];
+      j.returnLeg={runId:targetRun.id,runDay:d};
+      render();
+    }})).concat([{label:'Cancel',action:()=>{}}])
+  );
+}
+function removeReturnLeg(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  j.returnLeg=null;renderRuns();
+}
+function moveReturnLeg(jobId,runId,day){
+  const j=allJobs.find(x=>x.id===jobId);if(!j||!j.returnLeg)return;
+  j.returnLeg={runId,runDay:day};renderRuns();
+}
 function assignDriverToRun(runId,e){e.stopPropagation();openPickerRunId=openPickerRunId===runId?null:runId;renderRuns();}
 function setRunDriver(runId,driverId,e){if(e)e.stopPropagation();const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;run.driverId=driverId;openPickerRunId=null;renderRuns();}
 
@@ -868,18 +904,22 @@ function renderRuns(){
   const pad=runZoomLevel===0?'3px 6px':runZoomLevel===1?'5px 7px':'6px 8px';
   const font=runZoomLevel<=1?'11px':'12px';
   const mfont=runZoomLevel===0?'11px':runZoomLevel===1?'12px':'13px';
-  DAYS.forEach(day=>{const el=document.getElementById('dc-'+day);if(el){const n=dayRuns[day].reduce((a,r)=>a+r.jobIds.length,0);el.textContent=n?'('+n+')':'  ';}});
+  DAYS.forEach(day=>{const el=document.getElementById('dc-'+day);if(el){
+    const regular=dayRuns[day].reduce((a,r)=>a+r.jobIds.length,0);
+    const returns=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runDay===day).length;
+    const n=regular+returns;el.textContent=n?'('+n+')':'  ';}});
   if(!runs.length){board.innerHTML='<div class="empty-state"><div class="empty-icon">&#128203;</div><div>No runs for '+DAY_NAMES[currentDay]+'</div><div style="font-size:11px;margin-top:6px">Click "+ New run" to start</div></div>';return;}
   board.innerHTML='';
   runs.forEach(run=>{
     const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    const returnJobs=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runId===run.id&&j.returnLeg.runDay===currentDay);
     const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
     const div=document.createElement('div');
     div.className='run-card'+(isSel?' selecting':'');
     if(isSel)div.onclick=(e)=>{e.stopPropagation();addJobToRun(selectedJobId,run.id);};
     const pickerHTML=openPickerRunId===run.id?`<div class="inline-picker"><span style="font-size:11px;color:var(--muted)">Assign:</span><span class="picker-chip" onclick="setRunDriver('${run.id}',null,event)">- None</span>${DRIVERS.filter(d=>activeDrivers.has(d.id)).map(d=>`<span class="picker-chip${run.driverId===d.id?' sel':''}" onclick="setRunDriver('${run.id}','${d.id}',event)">${d.name}</span>`).join('')}</div>`:'';
-    const tableHTML=rj.length===0?(isSel?'<div class="run-drop-hint">Tap to add selected job here</div>':'<div style="padding:10px 12px;font-size:11px;color:var(--muted)">No jobs yet</div>'):`<table class="run-table"><thead><tr><th style="width:36px">#</th><th style="width:13%">Model</th><th style="width:11%">Reg</th><th style="width:9%">Type</th><th style="width:17%">Collection</th><th style="width:17%">Delivery</th><th style="width:18%">Notes</th><th style="width:13%">Actions</th></tr></thead><tbody>${rj.map((j,i)=>{const tc=typePillClass(j.type);return`<tr><td style="padding:${pad}"><div class="rt-reorder"><button class="rt-up" onclick="event.stopPropagation();moveJob('${run.id}',${i},-1)" ${i===0?'disabled':''}>&#9650;</button><span class="rt-n">${i+1}</span><button class="rt-down" onclick="event.stopPropagation();moveJob('${run.id}',${i},1)" ${i===rj.length-1?'disabled':''}>&#9660;</button></div></td><td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td><td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="padding:${pad}"><span class="type-pill ${tc}" style="font-size:10px;padding:1px 6px">${j.type}</span></td><td style="padding:${pad};font-size:${font};color:${j.status==='In Unit'?'var(--purple)':'var(--muted)'}">${j.displayFrom||j.from||'-'}</td><td style="padding:${pad};font-size:${font};color:${j.bringToUnit?'var(--purple)':'var(--muted)'};font-weight:${j.bringToUnit?'500':'400'}">${j.bringToUnit?'Unit':j.to||'-'}</td><td style="padding:${pad};font-size:10px;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td style="padding:${pad}"><div class="rt-act-btns"><button class="btu-btn${j.bringToUnit?' on':''}" onclick="event.stopPropagation();toggleBringToUnit('${j.id}')">&#8594; Unit</button><button onclick="event.stopPropagation();removeJobFromRun('${j.id}','${run.id}')" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1">&#215;</button></div></td></tr>`;}).join('')}${isSel?'<tr><td colspan="8"><div class="run-tap-hint">Tap to add another</div></td></tr>':''}</tbody></table>`;
-    div.innerHTML=`<div class="run-head"><div class="run-name">${run.name} <span style="font-size:10px;font-weight:400;color:var(--muted)">${DAY_NAMES[currentDay]}</span></div><div class="run-meta"><span class="run-count">${rj.length} job${rj.length!==1?'s':''}</span><span class="run-driver-badge${driver?'':' unassigned'}" onclick="assignDriverToRun('${run.id}',event)">${driver?driver.name:'Assign driver'}</span>${rj.length>0&&!isSel?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showRunCard('${run.id}')">Run card</button>`:''}<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();exportRunPDFById('${run.id}')">PDF</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRun('${run.id}')">&#215;</button></div></div>${pickerHTML}${tableHTML}`;
+    const tableHTML=rj.length===0?(isSel?'<div class="run-drop-hint">Tap to add selected job here</div>':'<div style="padding:10px 12px;font-size:11px;color:var(--muted)">No jobs yet</div>'):`<table class="run-table"><thead><tr><th style="width:36px">#</th><th style="width:13%">Model</th><th style="width:11%">Reg</th><th style="width:9%">Type</th><th style="width:17%">Collection</th><th style="width:17%">Delivery</th><th style="width:18%">Notes</th><th style="width:13%">Actions</th></tr></thead><tbody>${rj.map((j,i)=>{const tc=typePillClass(j.type);return`<tr><td style="padding:${pad}"><div class="rt-reorder"><button class="rt-up" onclick="event.stopPropagation();moveJob('${run.id}',${i},-1)" ${i===0?'disabled':''}>&#9650;</button><span class="rt-n">${i+1}</span><button class="rt-down" onclick="event.stopPropagation();moveJob('${run.id}',${i},1)" ${i===rj.length-1?'disabled':''}>&#9660;</button></div></td><td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td><td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="padding:${pad}"><span class="type-pill ${tc}" style="font-size:10px;padding:1px 6px">${j.type}</span></td><td style="padding:${pad};font-size:${font};color:${j.status==='In Unit'?'var(--purple)':'var(--muted)'}">${j.displayFrom||j.from||'-'}</td><td style="padding:${pad};font-size:${font};color:${j.bringToUnit?'var(--purple)':'var(--muted)'};font-weight:${j.bringToUnit?'500':'400'}">${j.bringToUnit?'Unit':j.to||'-'}</td><td style="padding:${pad};font-size:10px;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td style="padding:${pad}"><div class="rt-act-btns"><button class="btu-btn${j.bringToUnit?' on':''}" onclick="event.stopPropagation();toggleBringToUnit('${j.id}')">&#8594; Unit</button>${j.bringToUnit&&!j.returnLeg?`<button class="btu-btn" onclick="event.stopPropagation();planReturn('${j.id}')" style="font-size:9px">Plan return</button>`:''}${j.returnLeg?`<span style="font-size:9px;color:var(--ptl);padding:2px 5px;background:var(--ptl-dim);border-radius:4px">${DAY_NAMES[j.returnLeg.runDay]}</span>`:''}<button onclick="event.stopPropagation();removeJobFromRun('${j.id}','${run.id}')" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1">&#215;</button></div></td></tr>`;}).join('')}${returnJobs.map((j,ri)=>`<tr style="background:var(--purple-dim)"><td style="padding:${pad}"><span class="rt-n" style="color:var(--purple)">R${ri+1}</span></td><td style="padding:${pad};font-size:${mfont};font-weight:600;color:var(--purple)">${j.model}</td><td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="padding:${pad}"><span class="type-pill ${typePillClass(j.type)}" style="font-size:10px;padding:1px 6px">${j.type}</span></td><td style="padding:${pad};font-size:${font};color:var(--purple);font-weight:500">Unit</td><td style="padding:${pad};font-size:${font};color:var(--purple);font-weight:500">${j.to}</td><td style="padding:${pad};font-size:10px;color:var(--purple)">Return delivery</td><td style="padding:${pad}"><button class="btu-btn" onclick="event.stopPropagation();removeReturnLeg('${j.id}')" style="font-size:9px;color:var(--red)">Remove</button></td></tr>`).join('')}${isSel?'<tr><td colspan="8"><div class="run-tap-hint">Tap to add another</div></td></tr>':''}</tbody></table>`;
+    div.innerHTML=`<div class="run-head"><div class="run-name">${run.name} <span style="font-size:10px;font-weight:400;color:var(--muted)">${DAY_NAMES[currentDay]}</span></div><div class="run-meta"><span class="run-count">${rj.length+returnJobs.length} job${(rj.length+returnJobs.length)!==1?'s':''}</span><span class="run-driver-badge${driver?'':' unassigned'}" onclick="assignDriverToRun('${run.id}',event)">${driver?driver.name:'Assign driver'}</span>${rj.length>0&&!isSel?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showRunCard('${run.id}')">Run card</button>`:''}<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();exportRunPDFById('${run.id}')">PDF</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRun('${run.id}')">&#215;</button></div></div>${pickerHTML}${tableHTML}`;
     board.appendChild(div);
   });
 }
@@ -951,8 +991,32 @@ function markComplete(jobId){
 }
 async function completeJob(j,status){
   j._done=true;j._doneStatus=status;
+  j.status=status;
   if(j.airtableId){try{await atUpdate(j.airtableId,{Status:status});}catch(e){}}
-  renderProgress();
+  // Remove from current run
+  if(j.runId){
+    const day=j.runDay;
+    if(day&&dayRuns[day]){
+      const run=dayRuns[day].find(r=>r.id===j.runId);
+      if(run)run.jobIds=run.jobIds.filter(id=>id!==j.id);
+    }
+    j.runId=null;j.runDay=null;j.bringToUnit=false;
+  }
+  if(status==='In Unit'){
+    j.displayFrom='Unit';
+    // If there's a return leg planned, don't return to pool — keep it assigned
+    if(j.returnLeg){
+      j.runId=j.returnLeg.runId;
+      j.runDay=j.returnLeg.runDay;
+      j.status='Planned'; // Show as planned for the return day
+      j._done=false;j._doneStatus=null;
+      // Add to the return run's jobIds
+      const retRun=dayRuns[j.returnLeg.runDay]&&dayRuns[j.returnLeg.runDay].find(r=>r.id===j.returnLeg.runId);
+      if(retRun&&!retRun.jobIds.includes(j.id))retRun.jobIds.push(j.id);
+      j.returnLeg=null; // Clear the return leg since it's now the main assignment
+    }
+  }
+  render();
 }
 
 // === VEHICLES ARRIVING TODAY ===
@@ -1195,6 +1259,11 @@ function showRunCard(runId){
   document.getElementById('m-title').textContent='Run card - '+run.name+(driver?' ('+driver.name+')':'');
   document.getElementById('m-sub').textContent=DAY_NAMES[day];
   document.getElementById('m-body').innerHTML=`<div class="rc-header"><div class="rc-name">${driver?driver.name:'Unassigned'} - ${run.name}</div><div class="rc-date">${DAY_NAMES[day]}</div><div class="rc-stats"><span><strong>${rj.length}</strong> jobs</span><span><strong>${trail}</strong> trailered</span><span><strong>${rj.length-trail}</strong> driven</span></div></div>${rj.map((j,i)=>`<div class="run-stop"><div class="rs-num">${i+1}</div><div><div class="rs-vehicle">${j.model}${j.bringToUnit?' <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple)">Bring to Unit</span>':''}</div><div class="rs-chassis">${j.chassis} - ${j.customer}</div><div class="rs-route"><b>${j.displayFrom||j.from}</b><span class="rs-arr">&#8594;</span><b style="${j.bringToUnit?'color:var(--purple)':''}">${j.bringToUnit?'Unit':j.to}</b></div>${j.status==='In Unit'?'<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--purple-dim);color:var(--purple);display:inline-block;margin-top:3px">From Unit</span>':''}<span class="type-pill ${typePillClass(j.type)}" style="margin-top:4px;display:inline-block">${j.type}</span>${j.delDate?`<span style="font-size:10px;color:var(--blue);margin-left:5px">Del: ${fmtDate(j.delDate)}</span>`:''} ${j.notes?`<span class="rs-note">&#9888; ${j.notes}</span>`:''}</div></div>`).join('')}`;
+  // Add return legs to run card
+  const rlJobs=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runId===run.id&&j.returnLeg.runDay===day);
+  if(rlJobs.length){
+    document.getElementById('m-body').innerHTML+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;font-weight:600;color:var(--purple);margin-bottom:8px">RETURN DELIVERIES</div>${rlJobs.map((j,i)=>`<div class="run-stop"><div class="rs-num" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(167,139,250,.3)">R${i+1}</div><div><div class="rs-vehicle">${j.model} <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple)">Return delivery</span></div><div class="rs-chassis">${j.chassis} - ${j.customer}</div><div class="rs-route"><b style="color:var(--purple)">Unit</b><span class="rs-arr">&#8594;</span><b>${j.to}</b></div>${j.notes?`<span class="rs-note">&#9888; ${j.notes}</span>`:''}</div></div>`).join('')}</div>`;
+  }
   document.getElementById('m-copy-btn').dataset.runid=runId;
   document.getElementById('m-pdf-btn').dataset.runid=runId;
   document.getElementById('overlay').classList.remove('hidden');
@@ -1207,6 +1276,12 @@ function copyCard(){
   const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
   let txt='PTL RUN CARD - '+run.name+(driver?' | '+driver.name:'')+'\n'+DAY_NAMES[day]+'\n'+'─'.repeat(36)+'\n'+rj.length+' jobs\n\n';
   rj.forEach((j,i)=>{txt+=(i+1)+'. '+j.model+' ('+j.chassis+') - '+j.customer+(j.bringToUnit?' [BRING TO UNIT]':'')+'\n   '+(j.displayFrom||j.from)+' > '+(j.bringToUnit?'Unit':j.to)+' ['+j.type+']\n'+(j.delDate?'   Del: '+fmtDate(j.delDate)+'\n':'')+(j.notes?'   ! '+j.notes+'\n':'')+'\n';});
+  // Add return legs
+  const rlJobs2=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runId===run.id&&j.returnLeg.runDay===day);
+  if(rlJobs2.length){
+    txt+='RETURN DELIVERIES\n';
+    rlJobs2.forEach((j,i)=>{txt+='R'+(i+1)+'. '+j.model+' ('+j.chassis+') - '+j.customer+'\n   Unit > '+j.to+' ['+j.type+']\n'+(j.notes?'   ! '+j.notes+'\n':'')+'\n';});
+  }
   txt+='- Premier Travel Logistics';
   navigator.clipboard.writeText(txt).then(()=>{const b=document.getElementById('m-copy-btn');b.textContent='Copied!';b.style.background='#0a8a6b';setTimeout(()=>{b.textContent='Copy to clipboard';b.style.background='';},2000);});
 }
@@ -1226,6 +1301,7 @@ function buildRunPDFDoc(runsArr,dayLabel){
   runsArr.forEach((run,ri)=>{
     if(ri>0)doc.addPage();
     const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    const returnJobs=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runId===run.id&&j.returnLeg.runDay===currentDay);
     const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
     doc.setFillColor(...ptl);doc.rect(0,0,W,18,'F');
     doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.text('Premier Travel Logistics',M,10);
@@ -1268,18 +1344,39 @@ function exportDayPDF(){
 }
 
 // === DIVIDER ===
-window.addEventListener('load',function(){
+// Divider drag
+setTimeout(function(){
   const div=document.getElementById('plan-divider');
-  const left=div?div.previousElementSibling:null;
-  if(!div||!left)return;
+  if(!div)return;
+  const left=div.previousElementSibling;
+  if(!left)return;
   let dragging=false,startX=0,startW=0;
-  div.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=left.offsetWidth;div.classList.add('dragging');document.body.style.userSelect='none';document.body.style.cursor='col-resize';});
-  document.addEventListener('mousemove',e=>{if(!dragging)return;const dx=e.clientX-startX;const total=left.parentElement.offsetWidth;left.style.flex='0 0 '+Math.min(Math.max(startW+dx,200),total-200)+'px';});
-  document.addEventListener('mouseup',()=>{if(!dragging)return;dragging=false;div.classList.remove('dragging');document.body.style.userSelect='';document.body.style.cursor='';});
-  div.addEventListener('touchstart',e=>{dragging=true;startX=e.touches[0].clientX;startW=left.offsetWidth;},{passive:true});
-  document.addEventListener('touchmove',e=>{if(!dragging)return;const dx=e.touches[0].clientX-startX;const total=left.parentElement.offsetWidth;left.style.flex='0 0 '+Math.min(Math.max(startW+dx,200),total-200)+'px';},{passive:true});
-  document.addEventListener('touchend',()=>{dragging=false;div.classList.remove('dragging');});
-});
+  function onDown(x){
+    dragging=true;startX=x;startW=left.getBoundingClientRect().width;
+    div.classList.add('dragging');
+    document.body.style.userSelect='none';document.body.style.cursor='col-resize';
+  }
+  function onMove(x){
+    if(!dragging)return;
+    const dx=x-startX;
+    const total=left.parentElement.getBoundingClientRect().width;
+    const nw=Math.min(Math.max(startW+dx,250),total-250);
+    left.style.flex='0 0 '+nw+'px';
+    left.style.maxWidth=nw+'px';
+    left.style.minWidth=nw+'px';
+  }
+  function onUp(){
+    if(!dragging)return;
+    dragging=false;div.classList.remove('dragging');
+    document.body.style.userSelect='';document.body.style.cursor='';
+  }
+  div.addEventListener('mousedown',e=>{e.preventDefault();onDown(e.clientX);});
+  document.addEventListener('mousemove',e=>{onMove(e.clientX);});
+  document.addEventListener('mouseup',onUp);
+  div.addEventListener('touchstart',e=>{onDown(e.touches[0].clientX);},{passive:true});
+  document.addEventListener('touchmove',e=>{if(dragging)onMove(e.touches[0].clientX);},{passive:true});
+  document.addEventListener('touchend',onUp);
+},500);
 
 // === INIT ===
 buildDriverChips();
