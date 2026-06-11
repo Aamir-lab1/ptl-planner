@@ -240,6 +240,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .confirm-title{font-size:15px;font-weight:600;margin-bottom:10px}
 .confirm-text{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .confirm-btns{display:flex;gap:10px;justify-content:center}
+/* Fuel input */
+.fuel-input-wrap{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:2px 6px}
+.fuel-input-wrap span{font-size:11px;color:var(--muted)}
+.fuel-input{width:64px;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;text-align:right}
+.fuel-input:focus{color:var(--ptl)}
+.fuel-saved{font-size:10px;color:var(--ptl);margin-left:3px;opacity:0;transition:opacity .3s}
+.fuel-saved.show{opacity:1}
+/* Failed collection popup */
+.failed-dialog{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px;max-width:460px;width:100%}
+.failed-dialog-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.failed-dialog-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+.failed-field{margin-bottom:12px}
+.failed-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.failed-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:8px 11px;color:var(--text);font-family:var(--font);font-size:13px;outline:none}
+.failed-input:focus{border-color:var(--ptl)}
+.failed-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+/* Driver management in settings */
+.driver-table{width:100%;border-collapse:collapse;margin-top:10px}
+.driver-table th{padding:6px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border2)}
+.driver-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.driver-table tr:last-child td{border-bottom:none}
+.driver-table tr:hover td{background:rgba(255,255,255,.02)}
+.driver-status-pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;display:inline-block}
+.ds-active{background:var(--ptl-dim);color:var(--ptl)}
+.ds-inactive{background:var(--border);color:var(--muted)}
+.ds-suspended{background:var(--red-dim);color:var(--red)}
+.ds-onleave{background:var(--amber-dim);color:var(--amber)}
+.driver-edit-row td{background:var(--surface2);padding:6px 10px}
+.driver-inline-input{background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;width:100%}
+.driver-inline-input:focus{border-color:var(--ptl)}
+.driver-inline-select{background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--font);font-size:12px;outline:none}
+.driver-inline-select:focus{border-color:var(--ptl)}
 
 </style>
 </head>
@@ -506,6 +538,42 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       <div style="margin-top:8px;font-size:11px;color:var(--muted)">Active: <span id="conn-display" style="font-family:var(--mono)"></span></div>
       <div id="test-result" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border-radius:6px;padding:8px 10px;display:none"></div>
     </div>
+    <div class="settings-section" style="max-width:700px">
+      <div class="settings-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Drivers</span>
+        <button class="btn btn-primary btn-sm" onclick="showAddDriverRow()">+ Add Driver</button>
+      </div>
+      <div id="drivers-loading" style="font-size:12px;color:var(--muted);margin-top:8px">Loading drivers...</div>
+      <div id="add-driver-row" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-top:10px;display:none">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div style="flex:2;min-width:140px">
+            <div class="settings-label">Driver Name</div>
+            <input class="driver-inline-input" id="new-drv-name" placeholder="Full name" />
+          </div>
+          <div style="flex:1;min-width:120px">
+            <div class="settings-label">Type</div>
+            <select class="driver-inline-select" id="new-drv-type" style="width:100%">
+              <option value="Truck Driver">Truck Driver</option>
+              <option value="Trade Plater">Trade Plater</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:100px">
+            <div class="settings-label">Status</div>
+            <select class="driver-inline-select" id="new-drv-status" style="width:100%">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Suspended">Suspended</option>
+              <option value="On Leave">On Leave</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;padding-bottom:1px">
+            <button class="btn btn-primary btn-sm" onclick="saveNewDriver()">Save</button>
+            <button class="btn btn-ghost btn-sm" onclick="hideAddDriverRow()">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div id="drivers-table-wrap" style="margin-top:10px;overflow-x:auto;border:1px solid var(--border);border-radius:8px"></div>
+    </div>
   </div>
 </div>
 <!-- MODAL -->
@@ -529,6 +597,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <div class="confirm-btns" id="confirm-btns"></div>
   </div>
 </div>
+<!-- FAILED COLLECTION DIALOG -->
+<div class="overlay hidden" id="failed-overlay">
+  <div class="failed-dialog">
+    <div class="failed-dialog-title">&#9888; Failed Collection</div>
+    <div class="failed-dialog-sub" id="failed-dialog-sub"></div>
+    <div class="failed-field">
+      <div class="failed-label">Collection Location</div>
+      <input class="failed-input" id="failed-collection" />
+    </div>
+    <div class="failed-field">
+      <div class="failed-label">Delivery Location</div>
+      <input class="failed-input" id="failed-delivery" />
+    </div>
+    <div class="failed-field">
+      <div class="failed-label">Reason / Notes</div>
+      <input class="failed-input" id="failed-notes" placeholder="Why did this collection fail?" />
+    </div>
+    <div class="failed-btns">
+      <button class="btn btn-primary" onclick="submitFailedRebook()">Create New Job</button>
+      <button class="btn btn-ghost" onclick="failedToBookingForm()">Edit in Booking Form</button>
+      <button class="btn btn-ghost" onclick="closeFailedDialog()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // === CONFIG ===
@@ -544,20 +636,11 @@ const MOVE_OPTS=['Driven','Trailered','Sub-Contractor','Recovery'];
 const SOURCE_OPTS=['WhatsApp','Phone','E-mail','MoveX','Jigcar','Other','Whats App'];
 const TODAYDAY=DAYS[TODAY.getDay()===0?5:TODAY.getDay()-1]; // Map JS day to our day tabs
 
-let DRIVERS=[
-  {id:'rob',name:'Rob',type:'truck',av:'RB'},{id:'valy',name:'Valy',type:'truck',av:'VY'},
-  {id:'steve',name:'Steve',type:'truck',av:'SV'},{id:'jason',name:'Jason',type:'truck',av:'JS'},
-  {id:'craig',name:'Craig',type:'truck',av:'CR'},{id:'mikec',name:'Mike C',type:'truck',av:'MC'},
-  {id:'garrey',name:'Garrey',type:'truck',av:'GR'},{id:'cameron',name:'Cameron',type:'truck',av:'CM'},
-  {id:'costas',name:'Costas',type:'plater',av:'CO'},{id:'mahmud',name:'Mahmud',type:'plater',av:'MH'},
-  {id:'rafael',name:'Rafael',type:'plater',av:'RF'},{id:'luke',name:'Luke',type:'plater',av:'LK'},
-  {id:'romeo',name:'Romeo',type:'plater',av:'RM'},{id:'mikeb',name:'Mike B',type:'plater',av:'MB'},
-  {id:'paul',name:'Paul',type:'plater',av:'PL'},{id:'muqurab',name:'Muqurab',type:'plater',av:'MQ'},
-];
+let DRIVERS=[];
 
 let allJobs=[],allRecordsRaw=[];
 let dayRuns={mon:[],tue:[],wed:[],thu:[],fri:[],sat:[]};
-let activeDrivers=new Set(DRIVERS.map(d=>d.id));
+let activeDrivers=new Set();
 let selectedJobId=null,filterText='',statusFilter='all',typeFilter='all',locFilter=null,locFilterVal='';
 let zoomLevel=1,runZoomLevel=1,currentMainTab='plan',currentDay='mon';
 let autoTimer=null,jidCounter=0,runCounter=0,openPickerRunId=null;
@@ -597,6 +680,103 @@ async function testConnection(){
   }catch(e){el.textContent='Error: '+e.message;el.style.color='var(--red)';}
 }
 
+// === DRIVERS AIRTABLE API ===
+function driversFetch(endpoint='',opts={}){
+  const url='https://api.airtable.com/v0/'+getBase()+'/Drivers'+endpoint;
+  const headers={'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'};
+  return fetch(url,{...opts,headers:{...headers,...(opts.headers||{})}});
+}
+async function loadDrivers(){
+  const wrap=document.getElementById('drivers-table-wrap');
+  const loading=document.getElementById('drivers-loading');
+  if(loading)loading.style.display='block';
+  try{
+    let records=[],offset=null;
+    do{
+      const url='?pageSize=100'+(offset?'&offset='+offset:'');
+      const res=await driversFetch(url);
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const data=await res.json();
+      if(data.error)throw new Error(data.error.message);
+      records=records.concat(data.records||[]);offset=data.offset||null;
+    }while(offset);
+    DRIVERS=records.map(r=>({
+      id:r.id,
+      airtableId:r.id,
+      name:r.fields['Driver Name']||'',
+      type:r.fields['Driver Type']==='Trade Plater'?'plater':'truck',
+      driverType:r.fields['Driver Type']||'Truck Driver',
+      status:r.fields['Status']||'Active',
+      av:(r.fields['Driver Name']||'??').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2),
+    })).filter(d=>d.name);
+    activeDrivers=new Set(DRIVERS.filter(d=>d.status==='Active').map(d=>d.id));
+    buildDriverChips();
+    renderDriversTable();
+    if(loading)loading.style.display='none';
+  }catch(e){
+    if(loading){loading.textContent='Could not load drivers: '+e.message;loading.style.display='block';}
+  }
+}
+function renderDriversTable(){
+  const wrap=document.getElementById('drivers-table-wrap');if(!wrap)return;
+  if(!DRIVERS.length){wrap.innerHTML='<div style="padding:16px;text-align:center;font-size:12px;color:var(--muted)">No drivers yet. Click "+ Add Driver" to get started.</div>';return;}
+  const statusClass={Active:'ds-active',Inactive:'ds-inactive',Suspended:'ds-suspended','On Leave':'ds-onleave'};
+  wrap.innerHTML=`<table class="driver-table"><thead><tr><th>Name</th><th>Type</th><th>Status</th><th style="width:100px"></th></tr></thead><tbody id="driver-tbody">${DRIVERS.map(d=>`<tr id="drow-${d.id}"><td style="font-weight:500">${d.name}</td><td style="color:var(--muted)">${d.driverType}</td><td><span class="driver-status-pill ${statusClass[d.status]||'ds-inactive'}">${d.status}</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm" onclick="editDriverRow('${d.id}')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteDriver('${d.id}')">&#215;</button></div></td></tr>`).join('')}</tbody></table>`;
+}
+function showAddDriverRow(){
+  const row=document.getElementById('add-driver-row');
+  row.style.display='block';
+  document.getElementById('new-drv-name').focus();
+}
+function hideAddDriverRow(){
+  document.getElementById('add-driver-row').style.display='none';
+  document.getElementById('new-drv-name').value='';
+}
+async function saveNewDriver(){
+  const name=document.getElementById('new-drv-name').value.trim();
+  const type=document.getElementById('new-drv-type').value;
+  const status=document.getElementById('new-drv-status').value;
+  if(!name){alert('Please enter a driver name.');return;}
+  try{
+    const res=await driversFetch('',{method:'POST',body:JSON.stringify({fields:{'Driver Name':name,'Driver Type':type,'Status':status}})});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    hideAddDriverRow();
+    await loadDrivers();
+  }catch(e){alert('Error saving driver: '+e.message);}
+}
+function editDriverRow(driverId){
+  const d=DRIVERS.find(x=>x.id===driverId);if(!d)return;
+  const statusClass={Active:'ds-active',Inactive:'ds-inactive',Suspended:'ds-suspended','On Leave':'ds-onleave'};
+  const row=document.getElementById('drow-'+driverId);if(!row)return;
+  row.classList.add('driver-edit-row');
+  row.innerHTML=`
+    <td><input class="driver-inline-input" id="edit-name-${driverId}" value="${d.name}" style="width:140px"/></td>
+    <td><select class="driver-inline-select" id="edit-type-${driverId}"><option value="Truck Driver" ${d.driverType==='Truck Driver'?'selected':''}>Truck Driver</option><option value="Trade Plater" ${d.driverType==='Trade Plater'?'selected':''}>Trade Plater</option></select></td>
+    <td><select class="driver-inline-select" id="edit-status-${driverId}"><option value="Active" ${d.status==='Active'?'selected':''}>Active</option><option value="Inactive" ${d.status==='Inactive'?'selected':''}>Inactive</option><option value="Suspended" ${d.status==='Suspended'?'selected':''}>Suspended</option><option value="On Leave" ${d.status==='On Leave'?'selected':''}>On Leave</option></select></td>
+    <td><div style="display:flex;gap:5px"><button class="btn btn-primary btn-sm" onclick="saveDriverEdit('${driverId}')">Save</button><button class="btn btn-ghost btn-sm" onclick="renderDriversTable()">Cancel</button></div></td>`;
+}
+async function saveDriverEdit(driverId){
+  const name=document.getElementById('edit-name-'+driverId).value.trim();
+  const type=document.getElementById('edit-type-'+driverId).value;
+  const status=document.getElementById('edit-status-'+driverId).value;
+  if(!name){alert('Name cannot be empty.');return;}
+  try{
+    const res=await driversFetch('/'+driverId,{method:'PATCH',body:JSON.stringify({fields:{'Driver Name':name,'Driver Type':type,'Status':status}})});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    await loadDrivers();
+  }catch(e){alert('Error updating driver: '+e.message);}
+}
+async function deleteDriver(driverId){
+  const d=DRIVERS.find(x=>x.id===driverId);if(!d)return;
+  if(!confirm('Remove '+d.name+' from the drivers list?'))return;
+  try{
+    await driversFetch('/'+driverId,{method:'DELETE'});
+    await loadDrivers();
+  }catch(e){alert('Error deleting driver: '+e.message);}
+}
+
 // === AIRTABLE API ===
 async function atFetch(endpoint,opts={}){
   const url='https://api.airtable.com/v0/'+getBase()+'/'+encodeURIComponent(getTable())+endpoint;
@@ -609,6 +789,47 @@ async function atUpdate(recordId,fields){
 async function atCreate(fields){
   const res=await atFetch('',{method:'POST',body:JSON.stringify({fields})});
   return res.json();
+}
+// Batch PATCH up to 10 records at once (Airtable limit)
+async function atBatchUpdate(updates){
+  // updates: [{id, fields}]
+  for(let i=0;i<updates.length;i+=10){
+    const chunk=updates.slice(i,i+10);
+    await atFetch('',{method:'PATCH',body:JSON.stringify({records:chunk.map(u=>({id:u.id,fields:u.fields}))})});
+  }
+}
+
+// Write PTL Run Name, PTL Run Day, PTL Driver, PTL Run Position to all jobs in a run
+async function persistRun(run,day){
+  setSaving(true);
+  const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
+  const driverName=driver?driver.name:'';
+  const updates=run.jobIds.map((jid,idx)=>{
+    const j=allJobs.find(x=>x.id===jid);
+    if(!j||!j.airtableId)return null;
+    return{id:j.airtableId,fields:{'PTL Run Name':run.name,'PTL Run Day':day,'PTL Driver':driverName,'PTL Run Position':idx+1}};
+  }).filter(Boolean);
+  if(updates.length)await atBatchUpdate(updates).catch(e=>console.warn('Persist run failed:',e));
+  setSaving(false);
+}
+
+// Clear PTL fields for a single job (when removed from a run)
+async function clearJobRun(job){
+  if(!job||!job.airtableId)return;
+  setSaving(true);
+  await atUpdate(job.airtableId,{'PTL Run Name':'','PTL Run Day':'','PTL Driver':'','PTL Run Position':0}).catch(e=>console.warn('Clear job run failed:',e));
+  setSaving(false);
+}
+
+// Update PTL Driver on all jobs in a run (driver reassignment)
+async function persistRunDriver(run,day){
+  await persistRun(run,day);
+}
+
+function setSaving(on){
+  const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-label');
+  if(on){dot.className='sync-dot pulse';lbl.textContent='Saving...';}
+  else{dot.className='sync-dot live';lbl.textContent='Saved '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 }
 
 // === DATA PARSING ===
@@ -674,6 +895,11 @@ function airtableToJobs(records){
       deliveryRegion:get('Delivery Region'),
       collectionRegion:get('Collection Region'),
       runId:null,runDay:null,bringToUnit:false,_done:false,
+      ptlRunName:get('PTL Run Name'),
+      ptlRunDay:get('PTL Run Day'),
+      ptlDriver:get('PTL Driver'),
+      ptlRunPosition:parseInt(r.fields['PTL Run Position']||0)||0,
+      fuelCharge:r.fields['Fuel Charge']!=null?parseFloat(r.fields['Fuel Charge']):null,
     };
     if(j.status==='In Unit')j.displayFrom='Unit';else j.displayFrom=j.from;
     return j;
@@ -685,20 +911,13 @@ const PLAN_STATUSES=['Un-Planned','Planned','In Unit','To Be Confirmed','Un-Avai
 async function loadJobs(){
   const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-label');
   dot.className='sync-dot pulse';lbl.textContent='Syncing...';
-  const saved={},jobOrder={},btuFlags={};
-  const returnLegs={};
-  DAYS.forEach(day=>dayRuns[day].forEach(run=>{
-    run.jobIds.forEach((jid,idx)=>{
-      const j=allJobs.find(x=>x.id===jid);
-      if(j){
-        const key=j.airtableId;
-        saved[key]={runId:run.id,runDay:day};
-        jobOrder[key]=idx;
-        if(j.bringToUnit)btuFlags[key]=true;
-        if(j.returnLeg)returnLegs[key]=j.returnLeg;
-      }
-    });
-  }));
+  // Preserve local-only state that isn't in Airtable (bringToUnit, returnLegs, _done)
+  const localState={};
+  allJobs.forEach(j=>{
+    if(j.bringToUnit||j.returnLeg||j._done){
+      localState[j.airtableId]={bringToUnit:j.bringToUnit,returnLeg:j.returnLeg,_done:j._done,_doneStatus:j._doneStatus};
+    }
+  });
   try{
     let records=[],offset=null;
     do{
@@ -709,22 +928,56 @@ async function loadJobs(){
     }while(offset);
     allRecordsRaw=records;
     const fresh=airtableToJobs(records);
-    DAYS.forEach(day=>dayRuns[day].forEach(r=>r.jobIds=[]));
-    const toPlace=[];
+
+    // Rebuild dayRuns entirely from Airtable PTL fields
+    dayRuns={mon:[],tue:[],wed:[],thu:[],fri:[],sat:[]};
+    runCounter=0;
+
+    // Group jobs that have PTL Run Name + PTL Run Day into runs
+    const runMap={}; // key: "day|runName" -> run object
+    const toPlace=[]; // jobs to place into runs
+    const noRun=[]; // jobs without run assignment
+
     fresh.forEach(j=>{
-      const key=j.airtableId;
-      if(saved[key]){
-        j.runId=saved[key].runId;j.runDay=saved[key].runDay;
-        if(btuFlags[key])j.bringToUnit=true;
-        if(returnLegs[key])j.returnLeg=returnLegs[key];
-        toPlace.push({j,idx:jobOrder[key]??999,runId:saved[key].runId,runDay:saved[key].runDay});
+      // Restore local-only state
+      const ls=localState[j.airtableId];
+      if(ls){j.bringToUnit=ls.bringToUnit;j.returnLeg=ls.returnLeg;j._done=ls._done;j._doneStatus=ls._doneStatus;}
+      if(j.ptlRunName&&j.ptlRunDay&&DAYS.includes(j.ptlRunDay)){
+        toPlace.push(j);
+      }else{
+        noRun.push(j);
       }
     });
-    toPlace.sort((a,b)=>a.idx-b.idx);
-    toPlace.forEach(({j,runId,runDay})=>{
-      const run=dayRuns[runDay]&&dayRuns[runDay].find(r=>r.id===runId);
-      if(run)run.jobIds.push(j.id);
+
+    // Sort by position within each run before placing
+    toPlace.sort((a,b)=>(a.ptlRunPosition||0)-(b.ptlRunPosition||0));
+
+    // Build runs from grouped jobs
+    toPlace.forEach(j=>{
+      const key=j.ptlRunDay+'|'+j.ptlRunName;
+      if(!runMap[key]){
+        runCounter++;
+        // Derive a stable ID from run name+day so it doesn't change on reload
+        const stableId='run-'+j.ptlRunDay+'-'+j.ptlRunName.replace(/\s+/g,'-').toLowerCase();
+        const run={id:stableId,name:j.ptlRunName,jobIds:[],driverId:null};
+        // Restore driver from first job's PTL Driver field
+        if(j.ptlDriver){
+          const d=DRIVERS.find(x=>x.name===j.ptlDriver);
+          if(d)run.driverId=d.id;
+        }
+        runMap[key]=run;
+        dayRuns[j.ptlRunDay].push(run);
+      }
+      const run=runMap[key];
+      // Restore driver (any job in run can carry it)
+      if(!run.driverId&&j.ptlDriver){
+        const d=DRIVERS.find(x=>x.name===j.ptlDriver);
+        if(d)run.driverId=d.id;
+      }
+      j.runId=run.id;j.runDay=j.ptlRunDay;
+      run.jobIds.push(j.id);
     });
+
     allJobs=fresh;
     dot.className='sync-dot live';lbl.textContent='Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     render();if(autoTimer)clearTimeout(autoTimer);autoTimer=setTimeout(loadJobs,30000);
@@ -747,6 +1000,7 @@ function switchMainTab(tab){
     document.getElementById('set-base').value=getBase();
     document.getElementById('set-table').value=getTable();
     updateConnDisplay();
+    loadDrivers();
   }
   if(tab==='booking')initBookingForm();
 }
@@ -846,11 +1100,45 @@ function renderPool(){
 function tapJob(id){selectedJobId=selectedJobId===id?null:id;renderPool();renderRuns();}
 
 // === RUNS MANAGEMENT ===
-function createRun(){runCounter++;dayRuns[currentDay].push({id:'run-'+runCounter,name:'Run '+runCounter,jobIds:[],driverId:null});renderRuns();updateStats();}
-function addJobToRun(jobId,runId){const j=allJobs.find(x=>x.id===jobId);const run=dayRuns[currentDay].find(r=>r.id===runId);if(!j||!run||j.runId)return;j.runId=runId;j.runDay=currentDay;run.jobIds.push(jobId);selectedJobId=null;render();}
-function removeJobFromRun(jobId,runId){const j=allJobs.find(x=>x.id===jobId);if(!j)return;const day=j.runDay||currentDay;const run=dayRuns[day]&&dayRuns[day].find(r=>r.id===runId);if(run)run.jobIds=run.jobIds.filter(id=>id!==jobId);j.runId=null;j.runDay=null;render();}
-function moveJob(runId,idx,dir){const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;const ni=idx+dir;if(ni<0||ni>=run.jobIds.length)return;const tmp=run.jobIds[idx];run.jobIds[idx]=run.jobIds[ni];run.jobIds[ni]=tmp;renderRuns();}
-function deleteRun(runId){const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;run.jobIds.forEach(jid=>{const j=allJobs.find(x=>x.id===jid);if(j){j.runId=null;j.runDay=null;}});dayRuns[currentDay]=dayRuns[currentDay].filter(r=>r.id!==runId);render();}
+function createRun(){
+  runCounter++;
+  const id='run-'+currentDay+'-run-'+runCounter;
+  dayRuns[currentDay].push({id,name:'Run '+runCounter,jobIds:[],driverId:null});
+  renderRuns();updateStats();
+}
+function addJobToRun(jobId,runId){
+  const j=allJobs.find(x=>x.id===jobId);
+  const run=dayRuns[currentDay].find(r=>r.id===runId);
+  if(!j||!run||j.runId)return;
+  j.runId=runId;j.runDay=currentDay;
+  run.jobIds.push(jobId);
+  selectedJobId=null;
+  render();
+  persistRun(run,currentDay);
+}
+function removeJobFromRun(jobId,runId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  const day=j.runDay||currentDay;
+  const run=dayRuns[day]&&dayRuns[day].find(r=>r.id===runId);
+  if(run)run.jobIds=run.jobIds.filter(id=>id!==jobId);
+  j.runId=null;j.runDay=null;
+  render();
+  clearJobRun(j);
+}
+function moveJob(runId,idx,dir){
+  const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;
+  const ni=idx+dir;if(ni<0||ni>=run.jobIds.length)return;
+  const tmp=run.jobIds[idx];run.jobIds[idx]=run.jobIds[ni];run.jobIds[ni]=tmp;
+  renderRuns();
+  persistRun(run,currentDay);
+}
+function deleteRun(runId){
+  const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;
+  const jobsToClear=run.jobIds.map(jid=>allJobs.find(x=>x.id===jid)).filter(Boolean);
+  jobsToClear.forEach(j=>{j.runId=null;j.runDay=null;clearJobRun(j);});
+  dayRuns[currentDay]=dayRuns[currentDay].filter(r=>r.id!==runId);
+  render();
+}
 function toggleBringToUnit(jobId){
   const j=allJobs.find(x=>x.id===jobId);if(!j)return;
   j.bringToUnit=!j.bringToUnit;
@@ -878,7 +1166,12 @@ function moveReturnLeg(jobId,runId,day){
   j.returnLeg={runId,runDay:day};renderRuns();
 }
 function assignDriverToRun(runId,e){e.stopPropagation();openPickerRunId=openPickerRunId===runId?null:runId;renderRuns();}
-function setRunDriver(runId,driverId,e){if(e)e.stopPropagation();const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;run.driverId=driverId;openPickerRunId=null;renderRuns();}
+function setRunDriver(runId,driverId,e){
+  if(e)e.stopPropagation();
+  const run=dayRuns[currentDay].find(r=>r.id===runId);if(!run)return;
+  run.driverId=driverId;openPickerRunId=null;renderRuns();
+  persistRunDriver(run,currentDay);
+}
 
 // === MARK ALL IN PROGRESS ===
 async function markAllInProgress(){
@@ -969,9 +1262,21 @@ function renderProgress(){
   let html='';
   Object.entries(byDriver).forEach(([driver,jobs])=>{
     const d=DRIVERS.find(x=>x.name.toLowerCase()===driver.toLowerCase());
-    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Notes</th><th style="min-width:160px">Action</th></tr></thead><tbody>${jobs.map(j=>{
-    const isUnit=j.bringToUnit;
-    return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td style="color:${isUnit?'var(--purple)':'var(--muted)'}${isUnit?';font-weight:500':''}">${isUnit?j.to+' / Unit':j.to}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td style="font-size:10px;color:var(--amber);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${j._done?`<span class="sla-pill sla-ok">&#10003; ${j._doneStatus}</span>`:`<button class="btn btn-primary btn-sm" onclick="markComplete('${j.id}')">Mark complete</button>`}</td></tr>`;
+    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:220px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
+      const isUnit=j.bringToUnit;
+      const isDriven=j.type==='Driven';
+      const fuelVal=j.fuelCharge!=null?j.fuelCharge:'';
+      const fuelCell=isDriven
+        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">✓</span></div>`
+        :`<span style="font-size:11px;color:var(--muted)">N/A</span>`;
+      const actionCell=j._done
+        ?`<span class="sla-pill sla-ok">&#10003; ${j._doneStatus}</span>`
+        :`<div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="markComplete('${j.id}')">Complete</button>
+            <button class="btn btn-ghost btn-sm" onclick="moveToUnplanned('${j.id}')">Unplan</button>
+            <button class="btn btn-danger btn-sm" onclick="markFailed('${j.id}')">Failed</button>
+          </div>`;
+      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td style="color:${isUnit?'var(--purple)':'var(--muted)'}${isUnit?';font-weight:500':''}">${isUnit?j.to+' / Unit':j.to}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
     }).join('')}</tbody></table></div></div>`;
   });
   c.innerHTML=html;
@@ -992,7 +1297,12 @@ function markComplete(jobId){
 async function completeJob(j,status){
   j._done=true;j._doneStatus=status;
   j.status=status;
-  if(j.airtableId){try{await atUpdate(j.airtableId,{Status:status});}catch(e){}}
+  const todayISO=TODAY.toISOString().split('T')[0];
+  if(j.airtableId){
+    const fields={Status:status};
+    if(status==='Completed')fields['Actual Delivery Date']=todayISO;
+    try{await atUpdate(j.airtableId,fields);}catch(e){}
+  }
   // Remove from current run
   if(j.runId){
     const day=j.runDay;
@@ -1004,18 +1314,122 @@ async function completeJob(j,status){
   }
   if(status==='In Unit'){
     j.displayFrom='Unit';
-    // If there's a return leg planned, don't return to pool — keep it assigned
     if(j.returnLeg){
       j.runId=j.returnLeg.runId;
       j.runDay=j.returnLeg.runDay;
-      j.status='Planned'; // Show as planned for the return day
+      j.status='Planned';
       j._done=false;j._doneStatus=null;
-      // Add to the return run's jobIds
       const retRun=dayRuns[j.returnLeg.runDay]&&dayRuns[j.returnLeg.runDay].find(r=>r.id===j.returnLeg.runId);
       if(retRun&&!retRun.jobIds.includes(j.id))retRun.jobIds.push(j.id);
-      j.returnLeg=null; // Clear the return leg since it's now the main assignment
+      j.returnLeg=null;
     }
   }
+  render();
+}
+
+async function moveToUnplanned(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  // Remove from run
+  if(j.runId){
+    const day=j.runDay;
+    if(day&&dayRuns[day]){const run=dayRuns[day].find(r=>r.id===j.runId);if(run)run.jobIds=run.jobIds.filter(id=>id!==j.id);}
+    j.runId=null;j.runDay=null;
+  }
+  j.status='Un-Planned';j._done=false;j._doneStatus=null;
+  if(j.airtableId){try{await atUpdate(j.airtableId,{Status:'Un-Planned','PTL Run Name':'','PTL Run Day':'','PTL Driver':'','PTL Run Position':0});}catch(e){}}
+  render();
+}
+
+// === FUEL CHARGE ===
+async function saveFuelCharge(jobId,val){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  const amount=parseFloat(parseFloat(val||0).toFixed(2));
+  j.fuelCharge=amount;
+  if(j.airtableId){
+    try{
+      await atUpdate(j.airtableId,{'Fuel Charge':amount});
+      const saved=document.getElementById('fuel-saved-'+jobId);
+      if(saved){saved.classList.add('show');setTimeout(()=>saved.classList.remove('show'),2000);}
+    }catch(e){console.warn('Fuel save failed:',e);}
+  }
+}
+
+// === FAILED COLLECTION ===
+let _failedJobId=null;
+function markFailed(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  _failedJobId=jobId;
+  document.getElementById('failed-dialog-sub').textContent=j.model+(j.chassis?' ('+j.chassis+')':'')+' — '+j.customer;
+  document.getElementById('failed-collection').value=j.from||'';
+  document.getElementById('failed-delivery').value=j.to||'';
+  document.getElementById('failed-notes').value='';
+  document.getElementById('failed-overlay').classList.remove('hidden');
+}
+function closeFailedDialog(){
+  document.getElementById('failed-overlay').classList.add('hidden');
+  _failedJobId=null;
+}
+async function submitFailedRebook(){
+  const j=allJobs.find(x=>x.id===_failedJobId);if(!j)return;
+  const col=document.getElementById('failed-collection').value.trim();
+  const del=document.getElementById('failed-delivery').value.trim();
+  const notes=document.getElementById('failed-notes').value.trim();
+  // Mark original as Failed
+  j.status='Failed';j._done=true;j._doneStatus='Failed';
+  if(j.airtableId){try{await atUpdate(j.airtableId,{Status:'Failed'});}catch(e){}}
+  if(j.runId){
+    const day=j.runDay;
+    if(day&&dayRuns[day]){const run=dayRuns[day].find(r=>r.id===j.runId);if(run)run.jobIds=run.jobIds.filter(id=>id!==j.id);}
+    j.runId=null;j.runDay=null;
+    clearJobRun(j);
+  }
+  // Create new job if rebook needed
+  const fields={
+    Status:'Un-Planned',
+    'Date Booked':TODAY.toISOString().split('T')[0],
+    Customer:j.customer,
+    'Collection Location':col||j.from,
+    'Delivery Location':del||j.to,
+    'Vehicle Model':j.model,
+    'Reg/Vin':j.chassis,
+    'Movement Type':j.rawType||j.type,
+    Notes:notes?'Failed collection rebook: '+notes:'Failed collection rebook',
+    'Booking Source':'WhatsApp',
+  };
+  try{
+    const res=await atCreate(fields);
+    if(res.error)throw new Error(res.error.message);
+  }catch(e){alert('Failed to create rebook: '+e.message);}
+  closeFailedDialog();
+  loadJobs();
+}
+function failedToBookingForm(){
+  const j=allJobs.find(x=>x.id===_failedJobId);if(!j)return;
+  const col=document.getElementById('failed-collection').value.trim();
+  const del=document.getElementById('failed-delivery').value.trim();
+  const notes=document.getElementById('failed-notes').value.trim();
+  // Mark original as failed first
+  if(j.airtableId){atUpdate(j.airtableId,{Status:'Failed'}).catch(()=>{});}
+  j.status='Failed';
+  if(j.runId){
+    const day=j.runDay;
+    if(day&&dayRuns[day]){const run=dayRuns[day].find(r=>r.id===j.runId);if(run)run.jobIds=run.jobIds.filter(id=>id!==j.id);}
+    j.runId=null;j.runDay=null;
+  }
+  closeFailedDialog();
+  // Pre-fill booking form
+  switchMainTab('booking');
+  setTimeout(()=>{
+    document.getElementById('bf-customer').value=j.customer||'';
+    document.getElementById('bf-collection').value=col||j.from||'';
+    document.getElementById('bf-delivery').value=del||j.to||'';
+    document.getElementById('bf-model').value=j.model||'';
+    document.getElementById('bf-reg').value=j.chassis||'';
+    document.getElementById('bf-movetype').value=j.rawType||j.type||'';
+    document.getElementById('bf-notes').value=notes?'Failed collection rebook: '+notes:'Failed collection rebook';
+    document.getElementById('bf-status').value='Un-Planned';
+    document.getElementById('bf-date').value=TODAY.toISOString().split('T')[0];
+  },100);
   render();
 }
 
@@ -1258,11 +1672,11 @@ function showRunCard(runId){
   const trail=rj.filter(j=>j.type==='Trailered').length;
   document.getElementById('m-title').textContent='Run card - '+run.name+(driver?' ('+driver.name+')':'');
   document.getElementById('m-sub').textContent=DAY_NAMES[day];
-  document.getElementById('m-body').innerHTML=`<div class="rc-header"><div class="rc-name">${driver?driver.name:'Unassigned'} - ${run.name}</div><div class="rc-date">${DAY_NAMES[day]}</div><div class="rc-stats"><span><strong>${rj.length}</strong> jobs</span><span><strong>${trail}</strong> trailered</span><span><strong>${rj.length-trail}</strong> driven</span></div></div>${rj.map((j,i)=>`<div class="run-stop"><div class="rs-num">${i+1}</div><div><div class="rs-vehicle">${j.model}${j.bringToUnit?' <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple)">Bring to Unit</span>':''}</div><div class="rs-chassis">${j.chassis} - ${j.customer}</div><div class="rs-route"><b>${j.displayFrom||j.from}</b><span class="rs-arr">&#8594;</span><b style="${j.bringToUnit?'color:var(--purple)':''}">${j.bringToUnit?'Unit':j.to}</b></div>${j.status==='In Unit'?'<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--purple-dim);color:var(--purple);display:inline-block;margin-top:3px">From Unit</span>':''}<span class="type-pill ${typePillClass(j.type)}" style="margin-top:4px;display:inline-block">${j.type}</span>${j.delDate?`<span style="font-size:10px;color:var(--blue);margin-left:5px">Del: ${fmtDate(j.delDate)}</span>`:''} ${j.notes?`<span class="rs-note">&#9888; ${j.notes}</span>`:''}</div></div>`).join('')}`;
+  document.getElementById('m-body').innerHTML=`<div class="rc-header"><div class="rc-name">${driver?driver.name:'Unassigned'} - ${run.name}</div><div class="rc-date">${DAY_NAMES[day]}</div><div class="rc-stats"><span><strong>${rj.length}</strong> jobs</span><span><strong>${trail}</strong> trailered</span><span><strong>${rj.length-trail}</strong> driven</span></div></div>${rj.map((j,i)=>`<div class="run-stop"><div class="rs-num">${i+1}</div><div><div class="rs-vehicle">${j.model}${j.bringToUnit?' <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple)">Bring to Unit</span>':''}</div><div class="rs-chassis">${j.chassis}</div><div class="rs-route"><b>${j.displayFrom||j.from}</b><span class="rs-arr">&#8594;</span><b style="${j.bringToUnit?'color:var(--purple)':''}">${j.bringToUnit?'Unit':j.to}</b></div>${j.status==='In Unit'?'<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--purple-dim);color:var(--purple);display:inline-block;margin-top:3px">From Unit</span>':''}<span class="type-pill ${typePillClass(j.type)}" style="margin-top:4px;display:inline-block">${j.type}</span>${j.delDate?`<span style="font-size:10px;color:var(--blue);margin-left:5px">Del: ${fmtDate(j.delDate)}</span>`:''} ${j.notes?`<span class="rs-note">&#9888; ${j.notes}</span>`:''}</div></div>`).join('')}`;
   // Add return legs to run card
   const rlJobs=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runId===run.id&&j.returnLeg.runDay===day);
   if(rlJobs.length){
-    document.getElementById('m-body').innerHTML+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;font-weight:600;color:var(--purple);margin-bottom:8px">RETURN DELIVERIES</div>${rlJobs.map((j,i)=>`<div class="run-stop"><div class="rs-num" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(167,139,250,.3)">R${i+1}</div><div><div class="rs-vehicle">${j.model} <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple)">Return delivery</span></div><div class="rs-chassis">${j.chassis} - ${j.customer}</div><div class="rs-route"><b style="color:var(--purple)">Unit</b><span class="rs-arr">&#8594;</span><b>${j.to}</b></div>${j.notes?`<span class="rs-note">&#9888; ${j.notes}</span>`:''}</div></div>`).join('')}</div>`;
+    document.getElementById('m-body').innerHTML+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;font-weight:600;color:var(--purple);margin-bottom:8px">RETURN DELIVERIES</div>${rlJobs.map((j,i)=>`<div class="run-stop"><div class="rs-num" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(167,139,250,.3)">R${i+1}</div><div><div class="rs-vehicle">${j.model} <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-dim);color:var(--purple)">Return delivery</span></div><div class="rs-chassis">${j.chassis}</div><div class="rs-route"><b style="color:var(--purple)">Unit</b><span class="rs-arr">&#8594;</span><b>${j.to}</b></div>${j.notes?`<span class="rs-note">&#9888; ${j.notes}</span>`:''}</div></div>`).join('')}</div>`;
   }
   document.getElementById('m-copy-btn').dataset.runid=runId;
   document.getElementById('m-pdf-btn').dataset.runid=runId;
@@ -1379,12 +1793,11 @@ setTimeout(function(){
 },500);
 
 // === INIT ===
-buildDriverChips();
 updateConnDisplay();
 document.getElementById('set-token').value=getToken();
 document.getElementById('set-base').value=getBase();
 document.getElementById('set-table').value=getTable();
-loadJobs();
+loadDrivers().then(()=>loadJobs());
 
 </script>
 </body>
