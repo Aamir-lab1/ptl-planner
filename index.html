@@ -841,19 +841,30 @@ let pinEntry='';
 let pinSelectedUser=null;
 
 function getUsers(){
-  try{const u=localStorage.getItem('ptl_users');return u?JSON.parse(u):null;}catch(e){return null;}
+  try{const u=localStorage.getItem('ptl_users');const parsed=u?JSON.parse(u):null;return(parsed&&parsed.length>0)?parsed:null;}catch(e){return null;}
 }
-function saveUsers(users){localStorage.setItem('ptl_users',JSON.stringify(users));}
-function ensureUsers(){if(!getUsers())saveUsers(DEFAULT_USERS);return getUsers();}
+function saveUsers(users){try{localStorage.setItem('ptl_users',JSON.stringify(users));}catch(e){}}
+function ensureUsers(){
+  const existing=getUsers();
+  if(!existing||existing.length===0){saveUsers(DEFAULT_USERS);return DEFAULT_USERS;}
+  return existing;
+}
 
 function renderPinScreen(){
   const users=ensureUsers();
   const sel=document.getElementById('pin-user-select');
-  sel.innerHTML=users.map(u=>`<button class="pin-user-btn${pinSelectedUser===u.name?' active':''}" onclick="selectPinUser('${u.name}')">${u.name}</button>`).join('');
+  if(!sel)return;
+  sel.innerHTML=users.map(u=>{
+    const safeName=u.name.replace(/'/g,'&#39;');
+    return`<button class="pin-user-btn${pinSelectedUser===u.name?' active':''}" onclick="selectPinUser('${safeName}')">${u.name}</button>`;
+  }).join('');
   updatePinDots();
 }
 function selectPinUser(name){
-  pinSelectedUser=name;pinEntry='';
+  // Decode any HTML entities in name
+  const txt=document.createElement('textarea');txt.innerHTML=name;
+  pinSelectedUser=txt.value;
+  pinEntry='';
   document.getElementById('pin-error').textContent='';
   renderPinScreen();
 }
