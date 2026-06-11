@@ -498,8 +498,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       <option value="Recovery">Recovery</option>
     </select>
     <span id="aj-count" style="font-size:11px;color:var(--muted)"></span>
+    <button class="btn btn-ghost btn-sm" onclick="toggleColManager()" style="margin-left:auto">&#9776; Columns</button>
   </div>
-  <div class="alljobs-wrap" id="alljobs-content"></div>
+  <div id="aj-col-manager" style="display:none;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Drag to reorder. Click eye to hide/show.</div>
+    <div id="aj-col-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="resetColPrefs()">Reset to default</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div class="alljobs-wrap" id="alljobs-content" style="flex:1;overflow-y:auto;overflow-x:auto"></div>
+  </div>
 </div>
 <!-- BOOKING FORM -->
 <div class="view" id="view-booking">
@@ -642,9 +652,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       </div>
       <div id="rep-inv-preview" style="font-size:12px;color:var(--muted)"></div>
     </div>
+    <div class="settings-section" style="max-width:700px">
+      <div class="settings-title">Full Data Export</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Export all Airtable records within a date range — all fields, no status filtering. Useful for reconciliation or accountant use.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">
+        <div>
+          <div class="settings-label">Filter by</div>
+          <select class="report-filter-input" id="rep-raw-datefield" style="width:180px">
+            <option value="date">Date Booked</option>
+            <option value="delDate">Actual Delivery Date</option>
+          </select>
+        </div>
+        <div>
+          <div class="settings-label">From date</div>
+          <input class="report-filter-input" type="date" id="rep-raw-from" style="width:140px" />
+        </div>
+        <div>
+          <div class="settings-label">To date</div>
+          <input class="report-filter-input" type="date" id="rep-raw-to" style="width:140px" />
+        </div>
+        <button class="btn btn-primary" onclick="exportRawDataExcel()">&#8659; Export All Data</button>
+      </div>
+      <div id="rep-raw-preview" style="font-size:12px;color:var(--muted)"></div>
+    </div>
   </div>
 </div>
-<!-- SETTINGS -->
 <div class="view" id="view-settings">
   <div class="settings-scroll">
     <div class="settings-section">
@@ -1714,9 +1746,14 @@ function renderRuns(){
 
 // === STATS ===
 function updateStats(){
+  // Use dayRuns as source of truth for assigned jobs
+  const assignedIds=new Set();
+  DAYS.forEach(day=>dayRuns[day].forEach(r=>r.jobIds.forEach(id=>assignedIds.add(id))));
+  // Also count return legs
+  allJobs.forEach(j=>{if(j.returnLeg)assignedIds.add(j.id);});
+  const inRuns=assignedIds.size;
   const plan=allJobs.filter(j=>PLAN_STATUSES.includes(j.status));
-  const unassigned=plan.filter(j=>!j.runId).length;
-  const inRuns=plan.filter(j=>j.runId).length;
+  const unassigned=plan.filter(j=>!assignedIds.has(j.id)).length;
   const prog=allJobs.filter(j=>j.status==='In Progress').length;
   const slaAt=plan.filter(j=>slaInfo(j).cls==='sla-over').length;
   const arriving=getArrivingJobs().length;
@@ -1765,27 +1802,36 @@ function renderProgress(){
   let html='';
   Object.entries(byDriver).forEach(([driver,jobs])=>{
     const d=DRIVERS.find(x=>x.name.toLowerCase()===driver.toLowerCase());
-    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:220px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
+    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:240px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
       const isUnit=j.bringToUnit;
       const isDriven=j.type==='Driven';
       const fuelVal=j.fuelCharge!=null?j.fuelCharge:'';
       const fuelCell=isDriven
-        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">✓</span></div>`
+        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">&#10003;</span></div>`
         :`<span style="font-size:11px;color:var(--muted)">N/A</span>`;
+      const deliveryDisplay=isUnit
+        ?`<span style="color:var(--purple);font-weight:500">Unit</span>`
+        :`<span style="color:var(--muted)">${j.to}</span>`;
       const actionCell=j._done
         ?`<span class="sla-pill sla-ok">&#10003; ${j._doneStatus}</span>`
         :`<div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" onclick="markComplete('${j.id}')">Complete</button>
+            <button class="btu-btn${isUnit?' on':''}" onclick="toggleProgressBringToUnit('${j.id}')" title="Toggle bring to unit">&#8594; Unit</button>
             <button class="btn btn-ghost btn-sm" onclick="moveToUnplanned('${j.id}')">Unplan</button>
             <button class="btn btn-danger btn-sm" onclick="markFailed('${j.id}')">Failed</button>
           </div>`;
-      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td style="color:${isUnit?'var(--purple)':'var(--muted)'}${isUnit?';font-weight:500':''}">${isUnit?j.to+' / Unit':j.to}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
+      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td>${deliveryDisplay}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
     }).join('')}</tbody></table></div></div>`;
   });
   c.innerHTML=html;
 }
 
-function markComplete(jobId){
+function toggleProgressBringToUnit(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  j.bringToUnit=!j.bringToUnit;
+  // Note: deliberately does NOT update Airtable delivery field — app display only
+  renderProgress();
+}
   const j=allJobs.find(x=>x.id===jobId);if(!j)return;
   if(j.bringToUnit){
     showConfirm('Job completed - '+j.model,'Was this vehicle delivered to <b>'+j.to+'</b> or brought back to the <b>Unit</b>?',[
@@ -2037,6 +2083,86 @@ function filterAllJobs(v){
   ajTypeFilter=document.getElementById('aj-type-filter').value;
   renderAllJobs();
 }
+// === ALL JOBS COLUMN MANAGEMENT ===
+const ALL_COLS_DEF=[
+  {key:'status',label:'Status',type:'select',opts:STATUS_OPTS,field:'Status',w:'140px'},
+  {key:'date',label:'Date Booked',type:'date',field:'Date Booked',w:'110px'},
+  {key:'delDate',label:'Actual Del. Date',type:'date',field:'Actual Delivery Date',w:'130px'},
+  {key:'bookingSource',label:'Source',type:'select',opts:SOURCE_OPTS,field:'Booking Source',w:'110px'},
+  {key:'customer',label:'Customer',type:'text',field:'Customer',w:'130px'},
+  {key:'from',label:'Collection',type:'text',field:'Collection Location',w:'150px'},
+  {key:'availFrom',label:'Avail. From',type:'datetime',field:'Collection Available From',w:'130px'},
+  {key:'to',label:'Delivery',type:'text',field:'Delivery Location',w:'150px'},
+  {key:'model',label:'Model',type:'text',field:'Vehicle Model',w:'110px'},
+  {key:'chassis',label:'Reg/Vin',type:'text',field:'Reg/Vin',w:'110px'},
+  {key:'type',label:'Move Type',type:'select',opts:MOVE_OPTS,field:'Movement Type',w:'120px'},
+  {key:'charge',label:'Charge',type:'text',field:'Movement Charge',w:'90px'},
+  {key:'fuelCharge',label:'Fuel Charge',type:'text',field:'Fuel Charge',w:'90px'},
+  {key:'notes',label:'Notes',type:'text',field:'Notes',w:'180px'},
+  {key:'confirmedBy',label:'Confirmed By',type:'text',field:'Confirmed By',w:'120px'},
+  {key:'weekNo',label:'Week No',type:'text',field:'Week No.',w:'80px'},
+  {key:'invoiceStatus',label:'Invoice Status',type:'text',field:'Invoice Status',w:'120px'},
+  {key:'invoiceText',label:'Invoice Text',type:'text',field:'Invoice Text',w:'180px'},
+  {key:'poNumber',label:'PO Number',type:'text',field:'PO Number',w:'110px'},
+  {key:'direction',label:'Direction',type:'text',field:'Direction',w:'100px'},
+  {key:'deliveryRegion',label:'Del. Region',type:'text',field:'Delivery Region',w:'110px'},
+  {key:'collectionRegion',label:'Col. Region',type:'text',field:'Collection Region',w:'110px'},
+];
+function getColPrefsKey(){return'ptl_aj_cols_'+(currentUser||'default');}
+function getColPrefs(){
+  try{const p=localStorage.getItem(getColPrefsKey());return p?JSON.parse(p):null;}catch(e){return null;}
+}
+function saveColPrefs(prefs){localStorage.setItem(getColPrefsKey(),JSON.stringify(prefs));}
+function getActiveCols(){
+  const prefs=getColPrefs();
+  if(!prefs)return ALL_COLS_DEF.filter((_,i)=>i<15); // default: first 15
+  // Apply saved order and visibility
+  const result=[];
+  prefs.forEach(p=>{const col=ALL_COLS_DEF.find(c=>c.key===p.key);if(col&&!p.hidden)result.push(col);});
+  // Add any new cols not in prefs
+  ALL_COLS_DEF.forEach(col=>{if(!prefs.find(p=>p.key===col.key))result.push(col);});
+  return result;
+}
+function resetColPrefs(){localStorage.removeItem(getColPrefsKey());renderColManager();renderAllJobs();}
+let colManagerOpen=false;
+function toggleColManager(){
+  colManagerOpen=!colManagerOpen;
+  document.getElementById('aj-col-manager').style.display=colManagerOpen?'block':'none';
+  if(colManagerOpen)renderColManager();
+}
+function renderColManager(){
+  const list=document.getElementById('aj-col-list');if(!list)return;
+  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+  list.innerHTML=prefs.map((p,idx)=>{
+    const col=ALL_COLS_DEF.find(c=>c.key===p.key);if(!col)return'';
+    return`<div style="display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:3px 8px;font-size:11px;cursor:grab" draggable="true" data-key="${p.key}" ondragstart="colDragStart(event,'${p.key}')" ondragover="colDragOver(event)" ondrop="colDrop(event,'${p.key}')">
+      <span style="color:var(--muted);cursor:grab">&#8597;</span>
+      <span>${col.label}</span>
+      <button onclick="toggleColVisibility('${p.key}')" style="background:none;border:none;cursor:pointer;color:${p.hidden?'var(--muted)':'var(--ptl)'};font-size:13px;padding:0;line-height:1">${p.hidden?'&#128065;&#xFE0E;':'&#128065;'}</button>
+    </div>`;
+  }).join('');
+}
+let dragColKey=null;
+function colDragStart(e,key){dragColKey=key;e.dataTransfer.effectAllowed='move';}
+function colDragOver(e){e.preventDefault();}
+function colDrop(e,targetKey){
+  e.preventDefault();
+  if(!dragColKey||dragColKey===targetKey)return;
+  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+  const fromIdx=prefs.findIndex(p=>p.key===dragColKey);
+  const toIdx=prefs.findIndex(p=>p.key===targetKey);
+  if(fromIdx<0||toIdx<0)return;
+  const item=prefs.splice(fromIdx,1)[0];
+  prefs.splice(toIdx,0,item);
+  saveColPrefs(prefs);dragColKey=null;
+  renderColManager();renderAllJobs();
+}
+function toggleColVisibility(key){
+  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+  const p=prefs.find(x=>x.key===key);if(p)p.hidden=!p.hidden;
+  saveColPrefs(prefs);renderColManager();renderAllJobs();
+}
+
 function renderAllJobs(){
   const c=document.getElementById('alljobs-content');
   let jobs=allJobs.slice();
@@ -2046,24 +2172,8 @@ function renderAllJobs(){
   const countEl=document.getElementById('aj-count');
   if(countEl)countEl.textContent=jobs.length+' record'+(jobs.length!==1?'s':'');
   if(!jobs.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">&#128196;</div><div>No records found</div></div>';return;}
-  const cols=[
-    {key:'status',label:'Status',type:'select',opts:STATUS_OPTS,field:'Status',w:'140px'},
-    {key:'date',label:'Date Booked',type:'date',field:'Date Booked',w:'110px'},
-    {key:'bookingSource',label:'Source',type:'select',opts:SOURCE_OPTS,field:'Booking Source',w:'110px'},
-    {key:'customer',label:'Customer',type:'text',field:'Customer',w:'130px'},
-    {key:'from',label:'Collection',type:'text',field:'Collection Location',w:'150px'},
-    {key:'availFrom',label:'Avail. From',type:'datetime',field:'Collection Available From',w:'130px'},
-    {key:'to',label:'Delivery',type:'text',field:'Delivery Location',w:'150px'},
-    {key:'delDate',label:'Req. Delivery',type:'datetime',field:'Requested Delivery Date',w:'130px'},
-    {key:'model',label:'Model',type:'text',field:'Vehicle Model',w:'110px'},
-    {key:'chassis',label:'Reg/Vin',type:'text',field:'Reg/Vin',w:'110px'},
-    {key:'type',label:'Move Type',type:'select',opts:MOVE_OPTS,field:'Movement Type',w:'120px'},
-    {key:'notes',label:'Notes',type:'text',field:'Notes',w:'180px'},
-    {key:'confirmedBy',label:'Confirmed By',type:'text',field:'Confirmed By',w:'120px'},
-    {key:'weekNo',label:'Week No',type:'text',field:'Week No.',w:'80px'},
-    {key:'invoiceStatus',label:'Invoice Status',type:'text',field:'Invoice Status',w:'120px'},
-  ];
-  let html=`<div style="overflow:auto;max-height:100%"><table class="alljobs-table"><thead><tr>${cols.map(c=>`<th style="min-width:${c.w}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
+  const cols=getActiveCols();
+  let html=`<table class="alljobs-table" style="min-width:max-content"><thead><tr>${cols.map(col=>`<th style="min-width:${col.w}">${col.label}</th>`).join('')}</tr></thead><tbody>`;
   jobs.forEach(j=>{
     html+=`<tr id="ajr-${j.airtableId}" style="${highlightedJobId===j.airtableId?'background:rgba(45,190,168,0.15)':''}">`;
     cols.forEach(col=>{
@@ -2080,8 +2190,9 @@ function renderAllJobs(){
     });
     html+=`</tr>`;
   });
-  html+=`</tbody></table></div>`;
+  html+=`</tbody></table>`;
   c.innerHTML=html;
+  if(highlightedJobId){setTimeout(()=>{const row=document.getElementById('ajr-'+highlightedJobId);if(row)row.scrollIntoView({behavior:'smooth',block:'center'});},50);}
 }
 
 function ajStartEdit(el,recordId,field,key,type){
@@ -2314,15 +2425,45 @@ function downloadCSV(csv,filename){
   URL.revokeObjectURL(url);
 }
 function initReportsTab(){
-  // Set default date range to previous Mon-Sun
   const today=new Date();
   const dayOfWeek=today.getDay();
   const lastMon=new Date(today);lastMon.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1)-7);
   const lastSun=new Date(lastMon);lastSun.setDate(lastMon.getDate()+6);
   const fmt=d=>d.toISOString().split('T')[0];
-  ['rep-mov-from','rep-inv-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastMon);});
-  ['rep-mov-to','rep-inv-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastSun);});
+  ['rep-mov-from','rep-inv-from','rep-raw-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastMon);});
+  ['rep-mov-to','rep-inv-to','rep-raw-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastSun);});
   loadDealers();
+}
+async function exportRawDataExcel(){
+  const dateField=document.getElementById('rep-raw-datefield').value;
+  const fromDate=document.getElementById('rep-raw-from').value;
+  const toDate=document.getElementById('rep-raw-to').value;
+  let jobs=allJobs.slice();
+  if(fromDate||toDate){
+    jobs=jobs.filter(j=>{
+      const val=dateField==='date'?j.date:j.delDate;
+      const d=parseDate(val);
+      if(!d)return false;
+      if(fromDate&&d<new Date(fromDate))return false;
+      if(toDate&&d>new Date(toDate+'T23:59:59'))return false;
+      return true;
+    });
+  }
+  if(!jobs.length){showError('No records found in the selected date range');return;}
+  const headers=['Date Booked','Actual Delivery Date','Status','Customer','Collection Location','Delivery Location','Vehicle Model','Reg/Vin','Movement Type','Movement Charge','Fuel Charge','Invoice Status','Invoice Text','PO Number','Week No.','Booking Source','Confirmed By','Notes','PTL Run Name','PTL Run Day','PTL Driver'];
+  let csv=headers.join(',')+'\n';
+  jobs.forEach(j=>{
+    const row=[
+      j.date,j.delDate||'',j.status,j.customer,j.from,j.to,j.model,j.chassis,
+      j.rawType||j.type,j.charge||'',j.fuelCharge!=null?j.fuelCharge:'',
+      j.invoiceStatus||'',j.invoiceText||'',j.poNumber||'',j.weekNo||'',
+      j.bookingSource||'',j.confirmedBy||'',j.notes||'',
+      j.ptlRunName||'',j.ptlRunDay||'',j.ptlDriver||''
+    ].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"');
+    csv+=row.join(',')+'\n';
+  });
+  downloadCSV(csv,'PTL-Full-Export-'+new Date().toISOString().split('T')[0]+'.csv');
+  document.getElementById('rep-raw-preview').textContent=jobs.length+' records exported.';
 }
 async function submitBooking(){
   ['bf-success','bf-error','bf-duplicate'].forEach(id=>document.getElementById(id).style.display='none');
@@ -2469,22 +2610,28 @@ function pdfJobStop(doc,j,i,y,M,W,isReturn){
   const arrW=doc.getTextWidth(' > ');
   doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);
   doc.text(to,M+7+fromW+arrW,y+8);
-  // Notes
+  // Bring to Unit badge (shown in model line, notes go below separately)
+  let extraY=0;
+  if(j.bringToUnit&&!isReturn){
+    doc.setFillColor(167,139,250);doc.roundedRect(M+7,y+11,24,5,1,1,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text('Bring to Unit',M+8,y+14.5);
+    extraY=7;
+  }
+  // Notes — placed after Bring to Unit badge if present
   if(j.notes){
+    const ny=y+11+extraY;
     doc.setFillColor(250,238,218);
     const nw=Math.min(W-M-M-7,j.notes.length*1.7+6);
-    doc.roundedRect(M+7,y+11,nw,5,1,1,'F');
-    doc.setTextColor(133,79,11);doc.setFontSize(7);
-    doc.text('! '+j.notes.substring(0,50),M+8,y+14.5);
+    doc.roundedRect(M+7,ny,nw,5,1,1,'F');
+    doc.setTextColor(133,79,11);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('! '+j.notes.substring(0,50),M+8,ny+3.5);
+    extraY+=7;
   }
-  // Bring to Unit badge
-  if(j.bringToUnit&&!isReturn){
-    doc.setFillColor(167,139,250);doc.roundedRect(M+7,y+11,22,5,1,1,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.text('Bring to Unit',M+8,y+14.5);
-  }
+  const totalH=11+extraY;
   doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);
-  doc.line(M,y+(j.notes||j.bringToUnit?19:12),W-M,y+(j.notes||j.bringToUnit?19:12));
-  return j.notes||j.bringToUnit?22:15;
+  doc.line(M,y+totalH+2,W-M,y+totalH+2);
+  return totalH+5;
 }
 
 function buildRunPDFDoc(runsArr,dayLabel){
