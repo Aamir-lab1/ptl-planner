@@ -332,14 +332,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="pin-screen" id="pin-screen">
   <div class="pin-card">
     <div class="pin-title">PTL Planner</div>
-    <div class="pin-sub">Select your name and enter your PIN</div>
-    <div class="pin-user-select" id="pin-user-select"></div>
+    <div class="pin-sub" id="pin-sub">Enter your PIN to continue</div>
     <div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
-    <div class="pin-pad">
+    <div class="pin-pad" id="pin-pad">
       <button class="pin-key" onclick="pinKey(1)">1</button><button class="pin-key" onclick="pinKey(2)">2</button><button class="pin-key" onclick="pinKey(3)">3</button>
       <button class="pin-key" onclick="pinKey(4)">4</button><button class="pin-key" onclick="pinKey(5)">5</button><button class="pin-key" onclick="pinKey(6)">6</button>
       <button class="pin-key" onclick="pinKey(7)">7</button><button class="pin-key" onclick="pinKey(8)">8</button><button class="pin-key" onclick="pinKey(9)">9</button>
       <button class="pin-key" onclick="pinKey(-2)" style="font-size:12px">CLR</button><button class="pin-key" onclick="pinKey(0)">0</button><button class="pin-key" onclick="pinKey(-1)" style="font-size:14px">DEL</button>
+    </div>
+    <div id="pin-name-step" style="display:none;margin-top:10px">
+      <select id="pin-name-select" style="width:100%;background:#1f2438;border:1px solid rgba(255,255,255,0.16);border-radius:8px;padding:10px 12px;color:#e8eaf0;font-size:14px;outline:none;margin-bottom:12px">
+        <option value="">Select your name...</option>
+      </select>
+      <button onclick="confirmPinName()" style="width:100%;background:#2DBEA8;color:#071a15;border:none;padding:10px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Continue</button>
     </div>
     <div class="pin-error" id="pin-error"></div>
   </div>
@@ -838,58 +843,68 @@ const DEFAULT_USERS=[
 ];
 let currentUser=null;
 let pinEntry='';
-let pinSelectedUser=null;
+let pinVerified=false;
 
 function getUsers(){
-  try{const u=localStorage.getItem('ptl_users');const parsed=u?JSON.parse(u):null;return(parsed&&parsed.length>0)?parsed:null;}catch(e){return null;}
+  try{
+    const u=localStorage.getItem('ptl_users');
+    const parsed=u?JSON.parse(u):null;
+    return(parsed&&parsed.length>0)?parsed:DEFAULT_USERS;
+  }catch(e){return DEFAULT_USERS;}
 }
 function saveUsers(users){try{localStorage.setItem('ptl_users',JSON.stringify(users));}catch(e){}}
 function ensureUsers(){
   const existing=getUsers();
-  if(!existing||existing.length===0){saveUsers(DEFAULT_USERS);return DEFAULT_USERS;}
+  if(existing===DEFAULT_USERS)saveUsers(DEFAULT_USERS);
   return existing;
 }
 
+function getAppPin(){
+  // App PIN is the first user's PIN (shared PIN) — or 0000 default
+  const users=getUsers();
+  return users&&users[0]?users[0].pin:'0000';
+}
+
 function renderPinScreen(){
-  const users=ensureUsers();
-  const sel=document.getElementById('pin-user-select');
-  if(!sel)return;
-  sel.innerHTML=users.map(u=>{
-    const safeName=u.name.replace(/'/g,'&#39;');
-    return`<button class="pin-user-btn${pinSelectedUser===u.name?' active':''}" onclick="selectPinUser('${safeName}')">${u.name}</button>`;
-  }).join('');
+  pinEntry='';pinVerified=false;
+  document.getElementById('pin-sub').textContent='Enter your PIN to continue';
+  document.getElementById('pin-pad').style.display='grid';
+  document.getElementById('pin-name-step').style.display='none';
+  document.getElementById('pin-error').textContent='';
   updatePinDots();
 }
-function selectPinUser(name){
-  // Decode any HTML entities in name
-  const txt=document.createElement('textarea');txt.innerHTML=name;
-  pinSelectedUser=txt.value;
-  pinEntry='';
-  document.getElementById('pin-error').textContent='';
-  renderPinScreen();
-}
+
 function updatePinDots(){
   for(let i=0;i<4;i++){
     const dot=document.getElementById('pd'+i);
     if(dot)dot.className='pin-dot'+(i<pinEntry.length?' filled':'');
   }
 }
+
 function pinKey(k){
-  if(!pinSelectedUser){document.getElementById('pin-error').textContent='Select your name first';return;}
+  if(pinVerified)return;
   if(k===-2){pinEntry='';document.getElementById('pin-error').textContent='';updatePinDots();return;}
   if(k===-1){pinEntry=pinEntry.slice(0,-1);updatePinDots();return;}
   if(pinEntry.length>=4)return;
   pinEntry+=String(k);
   updatePinDots();
   if(pinEntry.length===4){
-    const users=getUsers();
-    const user=users.find(u=>u.name===pinSelectedUser);
-    if(user&&user.pin===pinEntry){
-      currentUser=user.name;
-      document.getElementById('session-name').textContent=currentUser;
-      document.getElementById('pin-screen').classList.add('hidden');
-      document.getElementById('main-app').style.display='';
-      initApp();
+    const appPin=getAppPin();
+    if(pinEntry===appPin||pinEntry===MASTER_PIN){
+      pinVerified=true;
+      // Show name selection step
+      document.getElementById('pin-sub').textContent='Who are you?';
+      document.getElementById('pin-pad').style.display='none';
+      document.getElementById('pin-error').textContent='';
+      // Populate name dropdown
+      const sel=document.getElementById('pin-name-select');
+      sel.innerHTML='<option value="">Select your name...</option>';
+      getUsers().forEach(u=>{
+        const opt=document.createElement('option');
+        opt.value=u.name;opt.textContent=u.name;
+        sel.appendChild(opt);
+      });
+      document.getElementById('pin-name-step').style.display='block';
     }else{
       document.getElementById('pin-error').textContent='Incorrect PIN';
       pinEntry='';
@@ -897,8 +912,20 @@ function pinKey(k){
     }
   }
 }
+
+function confirmPinName(){
+  const sel=document.getElementById('pin-name-select');
+  const name=sel.value;
+  if(!name){document.getElementById('pin-error').textContent='Please select your name';return;}
+  currentUser=name;
+  document.getElementById('session-name').textContent=currentUser;
+  document.getElementById('pin-screen').classList.add('hidden');
+  document.getElementById('main-app').style.display='';
+  initApp();
+}
+
 function lockApp(){
-  currentUser=null;pinEntry='';pinSelectedUser=null;
+  currentUser=null;pinEntry='';pinVerified=false;
   document.getElementById('pin-screen').classList.remove('hidden');
   document.getElementById('main-app').style.display='none';
   if(autoTimer)clearTimeout(autoTimer);
@@ -918,8 +945,6 @@ function initApp(){
 function checkSession(){
   renderPinScreen();
 }
-
-// === COLLAPSIBLE SECTIONS ===
 function toggleCollapse(id){
   const body=document.getElementById(id);
   const arrow=document.getElementById('arrow-'+id);
