@@ -348,6 +348,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       <button onclick="confirmPinName()" style="width:100%;background:#2DBEA8;color:#071a15;border:none;padding:10px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Continue</button>
     </div>
     <div class="pin-error" id="pin-error"></div>
+    <div id="pin-debug" style="margin-top:10px;font-size:10px;color:#555;font-family:monospace;text-align:center;max-width:260px;word-break:break-all"></div>
   </div>
 </div>
 <!-- MAIN APP -->
@@ -866,6 +867,8 @@ function getAppPin(){
   return users&&users[0]?users[0].pin:'0000';
 }
 
+function dbg(msg){const el=document.getElementById('pin-debug');if(el)el.textContent=msg;}
+
 function renderPinScreen(){
   pinEntry='';pinVerified=false;
   document.getElementById('pin-sub').textContent='Enter your PIN to continue';
@@ -873,6 +876,7 @@ function renderPinScreen(){
   document.getElementById('pin-name-step').style.display='none';
   document.getElementById('pin-error').textContent='';
   updatePinDots();
+  dbg('ready | appPin='+getAppPin());
 }
 
 function updatePinDots(){
@@ -884,6 +888,7 @@ function updatePinDots(){
 
 function pinKey(k){
   k=Number(k);
+  dbg('key='+k+' entry='+pinEntry+' verified='+pinVerified);
   if(pinVerified)return;
   if(k===-2){pinEntry='';document.getElementById('pin-error').textContent='';updatePinDots();return;}
   if(k===-1){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);updatePinDots();}return;}
