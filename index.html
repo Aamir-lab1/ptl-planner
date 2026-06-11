@@ -21,7 +21,9 @@
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
 html,body{height:100%;overflow:hidden}
-body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;display:flex;flex-direction:column}
+.pin-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column}
+.pin-screen.hidden{display:none}
 .header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
 .header-brand{display:flex;align-items:center;gap:10px}
 .header-logo{width:28px;height:28px;object-fit:contain}
@@ -275,7 +277,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .driver-inline-select{background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--font);font-size:12px;outline:none}
 .driver-inline-select:focus{border-color:var(--ptl)}
 /* PIN screen */
-.pin-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:20px}
 .pin-screen.hidden{display:none}
 .pin-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px;width:320px;text-align:center}
 .pin-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
@@ -882,9 +883,10 @@ function updatePinDots(){
 }
 
 function pinKey(k){
+  k=Number(k);
   if(pinVerified)return;
   if(k===-2){pinEntry='';document.getElementById('pin-error').textContent='';updatePinDots();return;}
-  if(k===-1){pinEntry=pinEntry.slice(0,-1);updatePinDots();return;}
+  if(k===-1){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);updatePinDots();}return;}
   if(pinEntry.length>=4)return;
   pinEntry+=String(k);
   updatePinDots();
@@ -892,23 +894,21 @@ function pinKey(k){
     const appPin=getAppPin();
     if(pinEntry===appPin||pinEntry===MASTER_PIN){
       pinVerified=true;
-      // Show name selection step
       document.getElementById('pin-sub').textContent='Who are you?';
       document.getElementById('pin-pad').style.display='none';
       document.getElementById('pin-error').textContent='';
-      // Populate name dropdown
       const sel=document.getElementById('pin-name-select');
       sel.innerHTML='<option value="">Select your name...</option>';
-      getUsers().forEach(u=>{
+      getUsers().forEach(function(u){
         const opt=document.createElement('option');
         opt.value=u.name;opt.textContent=u.name;
         sel.appendChild(opt);
       });
       document.getElementById('pin-name-step').style.display='block';
     }else{
-      document.getElementById('pin-error').textContent='Incorrect PIN';
+      document.getElementById('pin-error').textContent='Incorrect PIN — try again';
       pinEntry='';
-      setTimeout(updatePinDots,300);
+      updatePinDots();
     }
   }
 }
