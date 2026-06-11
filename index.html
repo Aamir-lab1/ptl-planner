@@ -273,6 +273,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .driver-inline-select{background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--font);font-size:12px;outline:none}
 .driver-inline-select:focus{border-color:var(--ptl)}
 
+/* Drag and drop */
+.run-card.drag-target{border-color:rgba(45,190,168,.4)}
+.run-card.drag-over{border-color:var(--ptl);background:#121e1b;box-shadow:0 0 0 2px rgba(45,190,168,.25)}
+.job-table tbody tr[draggable="true"]{cursor:grab}
+.job-table tbody tr[draggable="true"]:active{cursor:grabbing;opacity:.7}
+
 </style>
 </head>
 <body>
@@ -1148,19 +1154,19 @@ function renderPool(){
     const sla=slaInfo(j);const tc=typePillClass(j.type);
     const delOver=isDelOverdue(j);
     const rc=selectedJobId===j.id?'row-selected':sla.cls==='sla-over'?'row-sla-over':sla.cls==='sla-warn'?'row-sla-warn':'';
-    return`<tr class="${rc}" onclick="tapJob('${j.id}')" style="${colorStyle}">
-      <td style="padding:${pad};font-size:${font};color:var(--muted)">${j.customer}</td>
-      <td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td>
-      <td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td>
-      <td style="padding:${pad}"><span class="type-pill ${tc}">${j.type}</span>${j.status==='In Unit'?'<span class="sla-pill" style="background:var(--purple-dim);color:var(--purple);font-size:9px;margin-left:3px">Unit</span>':''}</td>
-      <td style="padding:${pad};font-size:${font};${j.status==='In Unit'?'color:var(--purple);font-weight:500':'color:var(--muted)'}">${j.displayFrom||j.from||'-'}</td>
-      <td style="padding:${pad};font-size:${font};color:var(--muted)">${j.to||'-'}</td>
-      <td style="padding:${pad};font-size:${font};color:var(--muted)">${j.availFrom?fmtDate(j.availFrom):'-'}</td>
-      <td style="padding:${pad};font-size:${font};${delOver?'color:var(--red)':'color:var(--muted)'}">${j.delDate?fmtDate(j.delDate):'-'}</td>
-      <td style="padding:${pad}">${sla.label?`<span class="sla-pill ${sla.cls}">${sla.label}</span>`:''}</td>
-      <td style="padding:${pad};font-size:${font};color:var(--muted)">${j.confirmedBy||'-'}</td>
-      <td style="padding:${pad};font-size:10px;color:var(--amber);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td>
-    </tr>`;
+    return`<tr class="${rc}" onclick="tapJob('${j.id}')" ondblclick="openJobInAllJobs('${j.id}')" draggable="true" ondragstart="onJobDragStart(event,'${j.id}')" style="${colorStyle}cursor:pointer">`+
+      `<td style="padding:${pad};font-size:${font};color:var(--muted)">${j.customer}</td>`+
+      `<td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td>`+
+      `<td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td>`+
+      `<td style="padding:${pad}"><span class="type-pill ${tc}">${j.type}</span>${j.status==='In Unit'?'<span class="sla-pill" style="background:var(--purple-dim);color:var(--purple);font-size:9px;margin-left:3px">Unit</span>':''}</td>`+
+      `<td style="padding:${pad};font-size:${font};${j.status==='In Unit'?'color:var(--purple);font-weight:500':'color:var(--muted)'}">${j.displayFrom||j.from||'-'}</td>`+
+      `<td style="padding:${pad};font-size:${font};color:var(--muted)">${j.to||'-'}</td>`+
+      `<td style="padding:${pad};font-size:${font};color:var(--muted)">${j.availFrom?fmtDate(j.availFrom):'-'}</td>`+
+      `<td style="padding:${pad};font-size:${font};${delOver?'color:var(--red)':'color:var(--muted)'}">${j.delDate?fmtDate(j.delDate):'-'}</td>`+
+      `<td style="padding:${pad}">${sla.label?`<span class="sla-pill ${sla.cls}">${sla.label}</span>`:''}</td>`+
+      `<td style="padding:${pad};font-size:${font};color:var(--muted)">${j.confirmedBy||'-'}</td>`+
+      `<td style="padding:${pad};font-size:10px;color:var(--amber);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td>`+
+      `</tr>`;
   };
 
   let html='';
@@ -1198,6 +1204,36 @@ function renderPool(){
 
 // === JOB SELECTION ===
 function tapJob(id){selectedJobId=selectedJobId===id?null:id;renderPool();renderRuns();}
+
+function openJobInAllJobs(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  switchMainTab('alljobs');
+  // Wait for renderAllJobs to complete then scroll and highlight
+  setTimeout(()=>{
+    const row=document.getElementById('ajr-'+j.airtableId);
+    if(!row)return;
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+    row.style.transition='background 0.3s';
+    row.style.background='rgba(45,190,168,0.18)';
+    setTimeout(()=>{row.style.background='';},2000);
+  },120);
+}
+
+// === DRAG AND DROP FROM JOB POOL TO RUNS ===
+let dragJobId=null;
+function onJobDragStart(e,jobId){
+  // Only allow on non-touch (desktop)
+  if(e.sourceCapabilities&&e.sourceCapabilities.firesTouchEvents)return;
+  dragJobId=jobId;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',jobId);
+  // Highlight all run cards as drop targets
+  setTimeout(()=>document.querySelectorAll('.run-card').forEach(c=>c.classList.add('drag-target')),0);
+}
+function onJobDragEnd(){
+  dragJobId=null;
+  document.querySelectorAll('.run-card').forEach(c=>c.classList.remove('drag-target','drag-over'));
+}
 
 // === RUNS MANAGEMENT ===
 function createRun(){
@@ -1310,6 +1346,15 @@ function renderRuns(){
     const div=document.createElement('div');
     div.className='run-card'+(isSel?' selecting':'');
     if(isSel)div.onclick=(e)=>{e.stopPropagation();addJobToRun(selectedJobId,run.id);};
+    // Drag-and-drop drop target
+    div.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';div.classList.add('drag-over');});
+    div.addEventListener('dragleave',e=>{if(!div.contains(e.relatedTarget))div.classList.remove('drag-over');});
+    div.addEventListener('drop',e=>{
+      e.preventDefault();div.classList.remove('drag-over','drag-target');
+      const jid=e.dataTransfer.getData('text/plain')||dragJobId;
+      if(jid)addJobToRun(jid,run.id);
+      document.querySelectorAll('.run-card').forEach(c=>c.classList.remove('drag-target','drag-over'));
+    });
     const pickerHTML=openPickerRunId===run.id?`<div class="inline-picker"><span style="font-size:11px;color:var(--muted)">Assign:</span><span class="picker-chip" onclick="setRunDriver('${run.id}',null,event)">- None</span>${DRIVERS.filter(d=>activeDrivers.has(d.id)).map(d=>`<span class="picker-chip${run.driverId===d.id?' sel':''}" onclick="setRunDriver('${run.id}','${d.id}',event)">${d.name}</span>`).join('')}</div>`:'';
     const tableHTML=rj.length===0?(isSel?'<div class="run-drop-hint">Tap to add selected job here</div>':'<div style="padding:10px 12px;font-size:11px;color:var(--muted)">No jobs yet</div>'):`<table class="run-table"><thead><tr><th style="width:36px">#</th><th style="width:13%">Model</th><th style="width:11%">Reg</th><th style="width:9%">Type</th><th style="width:17%">Collection</th><th style="width:17%">Delivery</th><th style="width:18%">Notes</th><th style="width:13%">Actions</th></tr></thead><tbody>${rj.map((j,i)=>{const tc=typePillClass(j.type);return`<tr><td style="padding:${pad}"><div class="rt-reorder"><button class="rt-up" onclick="event.stopPropagation();moveJob('${run.id}',${i},-1)" ${i===0?'disabled':''}>&#9650;</button><span class="rt-n">${i+1}</span><button class="rt-down" onclick="event.stopPropagation();moveJob('${run.id}',${i},1)" ${i===rj.length-1?'disabled':''}>&#9660;</button></div></td><td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td><td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="padding:${pad}"><span class="type-pill ${tc}" style="font-size:10px;padding:1px 6px">${j.type}</span></td><td style="padding:${pad};font-size:${font};color:${j.status==='In Unit'?'var(--purple)':'var(--muted)'}">${j.displayFrom||j.from||'-'}</td><td style="padding:${pad};font-size:${font};color:${j.bringToUnit?'var(--purple)':'var(--muted)'};font-weight:${j.bringToUnit?'500':'400'}">${j.bringToUnit?'Unit':j.to||'-'}</td><td style="padding:${pad};font-size:10px;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td style="padding:${pad}"><div class="rt-act-btns"><button class="btu-btn${j.bringToUnit?' on':''}" onclick="event.stopPropagation();toggleBringToUnit('${j.id}')">&#8594; Unit</button>${j.bringToUnit&&!j.returnLeg?`<button class="btu-btn" onclick="event.stopPropagation();planReturn('${j.id}')" style="font-size:9px">Plan return</button>`:''}${j.returnLeg?`<span style="font-size:9px;color:var(--ptl);padding:2px 5px;background:var(--ptl-dim);border-radius:4px">${DAY_NAMES[j.returnLeg.runDay]}</span>`:''}<button onclick="event.stopPropagation();removeJobFromRun('${j.id}','${run.id}')" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1">&#215;</button></div></td></tr>`;}).join('')}${returnJobs.map((j,ri)=>`<tr style="background:var(--purple-dim)"><td style="padding:${pad}"><span class="rt-n" style="color:var(--purple)">R${ri+1}</span></td><td style="padding:${pad};font-size:${mfont};font-weight:600;color:var(--purple)">${j.model}</td><td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="padding:${pad}"><span class="type-pill ${typePillClass(j.type)}" style="font-size:10px;padding:1px 6px">${j.type}</span></td><td style="padding:${pad};font-size:${font};color:var(--purple);font-weight:500">Unit</td><td style="padding:${pad};font-size:${font};color:var(--purple);font-weight:500">${j.to}</td><td style="padding:${pad};font-size:10px;color:var(--purple)">Return delivery</td><td style="padding:${pad}"><button class="btu-btn" onclick="event.stopPropagation();removeReturnLeg('${j.id}')" style="font-size:9px;color:var(--red)">Remove</button></td></tr>`).join('')}${isSel?'<tr><td colspan="8"><div class="run-tap-hint">Tap to add another</div></td></tr>':''}</tbody></table>`;
     div.innerHTML=`<div class="run-head"><div class="run-name">${run.name} <span style="font-size:10px;font-weight:400;color:var(--muted)">${DAY_NAMES[currentDay]}</span></div><div class="run-meta"><span class="run-count">${rj.length+returnJobs.length} job${(rj.length+returnJobs.length)!==1?'s':''}</span><span class="run-driver-badge${driver?'':' unassigned'}" onclick="assignDriverToRun('${run.id}',event)">${driver?driver.name:'Assign driver'}</span>${rj.length>0&&!isSel?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showRunCard('${run.id}')">Run card</button>`:''}<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();exportRunPDFById('${run.id}')">PDF</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRun('${run.id}')">&#215;</button></div></div>${pickerHTML}${tableHTML}`;
