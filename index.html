@@ -320,7 +320,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
         <button class="filter-btn" id="f-inunit" onclick="setStatusFilter('inunit')">In Unit</button>
         <button class="filter-btn" id="f-unavail" onclick="setStatusFilter('unavail')">Unavailable</button>
         <button class="filter-btn active" id="f-type-all" onclick="setTypeFilter('all')">All types</button>
-        <button class="filter-btn" id="f-type-trail" onclick="setTypeFilter('trailered')">Trailered</button>
+        <button class="filter-btn" id="f-type-trailered" onclick="setTypeFilter('trailered')">Trailered</button>
         <button class="filter-btn" id="f-type-driven" onclick="setTypeFilter('driven')">Driven</button>
         <button class="filter-btn" id="f-samecol" onclick="toggleLocFilter('col')">Same collection</button>
         <button class="filter-btn" id="f-samedel" onclick="toggleLocFilter('del')">Same delivery</button>
@@ -539,7 +539,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       <div id="test-result" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border-radius:6px;padding:8px 10px;display:none"></div>
     </div>
     <div class="settings-section" style="max-width:700px">
-      <div class="settings-title" style="display:flex;align-items:center;justify-content:space-between">
+      <div class="settings-title">Location aliases</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">Define shorthand or abbreviations for locations. E.g. "MK" → "Milton Keynes". Built-in: MK.</div>
+      <div id="aliases-list" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="driver-inline-input" id="alias-from" placeholder="Abbreviation (e.g. MK)" style="width:140px"/>
+        <span style="color:var(--muted);font-size:13px">→</span>
+        <input class="driver-inline-input" id="alias-to" placeholder="Full name (e.g. Milton Keynes)" style="width:180px"/>
+        <button class="btn btn-primary btn-sm" onclick="addLocationAlias()">Add</button>
+      </div>
+    </div>
         <span>Drivers</span>
         <button class="btn btn-primary btn-sm" onclick="showAddDriverRow()">+ Add Driver</button>
       </div>
@@ -617,6 +626,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <div class="failed-btns">
       <button class="btn btn-primary" onclick="submitFailedRebook()">Create New Job</button>
       <button class="btn btn-ghost" onclick="failedToBookingForm()">Edit in Booking Form</button>
+      <button class="btn btn-danger" onclick="markFailedOnly()">Mark as Failed Only</button>
       <button class="btn btn-ghost" onclick="closeFailedDialog()">Cancel</button>
     </div>
   </div>
@@ -1001,6 +1011,7 @@ function switchMainTab(tab){
     document.getElementById('set-table').value=getTable();
     updateConnDisplay();
     loadDrivers();
+    renderAliasesList();
   }
   if(tab==='booking')initBookingForm();
 }
@@ -1008,24 +1019,70 @@ function switchDay(day){currentDay=day;DAYS.forEach(d=>document.getElementById('
 
 // === FILTERS ===
 function setStatusFilter(f){
-  statusFilter=f;
-  ['all','unplanned','planned','tbc','inunit','unavail'].forEach(x=>{const el=document.getElementById('f-'+x);if(el)el.classList.toggle('active',x===f);});
+  statusFilter=statusFilter===f?'all':f;
+  ['all','unplanned','planned','tbc','inunit','unavail'].forEach(x=>{const el=document.getElementById('f-'+x);if(el)el.classList.toggle('active',x===statusFilter);});
   renderPool();
 }
 function setTypeFilter(f){
-  typeFilter=f;
-  ['all','trail','driven'].forEach(x=>{const el=document.getElementById('f-type-'+x);if(el)el.classList.toggle('active',x===f);});
+  typeFilter=typeFilter===f?'all':f;
+  ['all','trailered','driven'].forEach(x=>{const el=document.getElementById('f-type-'+x);if(el)el.classList.toggle('active',x===typeFilter);});
   renderPool();
 }
+// === LOCATION GROUPING ===
+// Built-in abbreviations
+const LOCATION_ABBREVS={'MK':'Milton Keynes','M':'Manchester'};
+// User-defined aliases loaded from localStorage
+function getLocationAliases(){try{return JSON.parse(localStorage.getItem('ptl_loc_aliases')||'{}');}catch(e){return{};}}
+function saveLocationAliases(obj){localStorage.setItem('ptl_loc_aliases',JSON.stringify(obj));}
+function renderAliasesList(){
+  const el=document.getElementById('aliases-list');if(!el)return;
+  const aliases=getLocationAliases();
+  const entries=Object.entries(aliases);
+  if(!entries.length){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No custom aliases yet.</div>';return;}
+  el.innerHTML=entries.map(([k,v])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px"><span style="font-family:var(--mono);color:var(--ptl);min-width:80px">${k}</span><span style="color:var(--muted)">→</span><span style="flex:1">${v}</span><button class="btn btn-danger btn-sm" onclick="removeLocationAlias('${k}')">&#215;</button></div>`).join('');
+}
+function addLocationAlias(){
+  const from=document.getElementById('alias-from').value.trim();
+  const to=document.getElementById('alias-to').value.trim();
+  if(!from||!to)return;
+  const aliases=getLocationAliases();aliases[from]=to;saveLocationAliases(aliases);
+  document.getElementById('alias-from').value='';document.getElementById('alias-to').value='';
+  renderAliasesList();
+}
+function removeLocationAlias(key){
+  const aliases=getLocationAliases();delete aliases[key];saveLocationAliases(aliases);renderAliasesList();
+}
+
+// Large list of UK towns/cities for smart extraction
+const UK_TOWNS=['Aberdeen','Aberystwyth','Basingstoke','Bath','Bedford','Birmingham','Blackburn','Blackpool','Bolton','Bournemouth','Bradford','Brighton','Bristol','Bury','Cambridge','Canterbury','Carlisle','Chelmsford','Cheltenham','Chester','Chichester','Colchester','Coventry','Crawley','Derby','Doncaster','Durham','Edinburgh','Exeter','Glasgow','Gloucester','Guildford','Halifax','Harrogate','Hereford','Huddersfield','Hull','Ipswich','Leeds','Leicester','Lincoln','Liverpool','London','Luton','Maidstone','Manchester','Middlesbrough','Milton Keynes','Newcastle','Northampton','Norwich','Nottingham','Oxford','Peterborough','Plymouth','Portsmouth','Preston','Reading','Salford','Salisbury','Sheffield','Shrewsbury','Slough','Southampton','Southend','Stoke','Sunderland','Swansea','Swindon','Telford','Wakefield','Warrington','Wolverhampton','Worcester','York'];
+
+function extractTown(location){
+  if(!location)return'';
+  const aliases={...LOCATION_ABBREVS,...getLocationAliases()};
+  const str=location.trim();
+  // Check aliases first (e.g. MK)
+  for(const [abbr,full] of Object.entries(aliases)){
+    const re=new RegExp('\\b'+abbr+'\\b','i');
+    if(re.test(str))return full;
+  }
+  // Try to match against known UK towns (longest match wins)
+  const sorted=[...UK_TOWNS].sort((a,b)=>b.length-a.length);
+  for(const town of sorted){
+    if(str.toLowerCase().includes(town.toLowerCase()))return town;
+  }
+  // Fallback: last word(s)
+  const words=str.split(/\s+/);
+  return words[words.length-1]||str;
+}
+
+// locFilter is now a Set: can contain 'col', 'del', or both
+let locFilters=new Set();
+
 function toggleLocFilter(type){
-  if(locFilter===type){locFilter=null;locFilterVal='';document.getElementById('f-samecol').classList.remove('active');document.getElementById('f-samedel').classList.remove('active');renderPool();return;}
-  const field=type==='col'?'from':'to';const counts={};
-  allJobs.filter(j=>PLAN_STATUSES.includes(j.status)&&!j.runId).forEach(j=>{if(j[field])counts[j[field]]=(counts[j[field]]||0)+1;});
-  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
-  if(!top||top[1]<2){alert('No matching locations found.');return;}
-  locFilter=type;locFilterVal=top[0];
-  document.getElementById('f-samecol').classList.toggle('active',type==='col');
-  document.getElementById('f-samedel').classList.toggle('active',type==='del');
+  if(locFilters.has(type))locFilters.delete(type);
+  else locFilters.add(type);
+  document.getElementById('f-samecol').classList.toggle('active',locFilters.has('col'));
+  document.getElementById('f-samedel').classList.toggle('active',locFilters.has('del'));
   renderPool();
 }
 function filterJobs(v){filterText=v.toLowerCase();renderPool();}
@@ -1051,6 +1108,15 @@ function toggleAddDriver(){const f=document.getElementById('add-driver-form');f.
 function addNewDriver(){const name=document.getElementById('new-driver-name').value.trim();const type=document.getElementById('new-driver-type').value;if(!name)return;DRIVERS.push({id:'drv_'+Date.now(),name,type,av:name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)});activeDrivers.add(DRIVERS[DRIVERS.length-1].id);document.getElementById('new-driver-name').value='';toggleAddDriver();buildDriverChips();}
 
 // === RENDER POOL ===
+// Colour palette for location groups
+const GROUP_COLORS=[
+  {bg:'rgba(45,190,168,0.10)',border:'rgba(45,190,168,0.5)',label:'var(--ptl)'},
+  {bg:'rgba(79,142,247,0.10)',border:'rgba(79,142,247,0.5)',label:'var(--blue)'},
+  {bg:'rgba(167,139,250,0.10)',border:'rgba(167,139,250,0.5)',label:'var(--purple)'},
+  {bg:'rgba(245,166,35,0.10)',border:'rgba(245,166,35,0.5)',label:'var(--amber)'},
+  {bg:'rgba(74,222,128,0.10)',border:'rgba(74,222,128,0.5)',label:'var(--green)'},
+  {bg:'rgba(255,95,95,0.10)',border:'rgba(255,95,95,0.5)',label:'var(--red)'},
+];
 function renderPool(){
   const tbody=document.getElementById('job-tbody');if(!tbody)return;
   let jobs=allJobs.filter(j=>PLAN_STATUSES.includes(j.status)&&!j.runId);
@@ -1062,18 +1128,27 @@ function renderPool(){
   if(typeFilter==='trailered')jobs=jobs.filter(j=>j.type==='Trailered');
   else if(typeFilter==='driven')jobs=jobs.filter(j=>j.type!=='Trailered');
   if(filterText)jobs=jobs.filter(j=>[j.model,j.chassis,j.from,j.to,j.customer,j.notes,j.confirmedBy].join(' ').toLowerCase().includes(filterText));
-  if(locFilter){const field=locFilter==='col'?'from':'to';jobs=jobs.filter(j=>j[field]===locFilterVal);}
-  jobs.sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return da-db;});
+
   const pad=zoomLevel===0?'2px 5px':zoomLevel===1?'3px 7px':zoomLevel===2?'5px 8px':'7px 10px';
   const font=zoomLevel<=1?'11px':zoomLevel===2?'11px':'12px';
   const mfont=zoomLevel===0?'10px':zoomLevel===1?'11px':zoomLevel===2?'12px':'13px';
   if(!allJobs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--muted)"><div class="spinner" style="margin:0 auto 10px"></div>Loading...</td></tr>';return;}
   if(!jobs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--muted)">No jobs to show</td></tr>';return;}
-  const mkRow=j=>{
+
+  // Location grouping logic
+  const useLocGroup=locFilters.size>0;
+  let groupKey=j=>'';
+  if(useLocGroup){
+    if(locFilters.has('col')&&locFilters.has('del'))groupKey=j=>extractTown(j.from)+'||'+extractTown(j.to);
+    else if(locFilters.has('col'))groupKey=j=>extractTown(j.from);
+    else groupKey=j=>extractTown(j.to);
+  }
+
+  const mkRow=(j,colorStyle='')=>{
     const sla=slaInfo(j);const tc=typePillClass(j.type);
     const delOver=isDelOverdue(j);
     const rc=selectedJobId===j.id?'row-selected':sla.cls==='sla-over'?'row-sla-over':sla.cls==='sla-warn'?'row-sla-warn':'';
-    return`<tr class="${rc}" onclick="tapJob('${j.id}')">
+    return`<tr class="${rc}" onclick="tapJob('${j.id}')" style="${colorStyle}">
       <td style="padding:${pad};font-size:${font};color:var(--muted)">${j.customer}</td>
       <td style="padding:${pad};font-size:${mfont};font-weight:600">${j.model}</td>
       <td style="padding:${pad};font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td>
@@ -1087,12 +1162,37 @@ function renderPool(){
       <td style="padding:${pad};font-size:10px;color:var(--amber);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td>
     </tr>`;
   };
+
   let html='';
-  if(typeFilter==='all'){
+
+  if(useLocGroup){
+    // Group by town key, sort groups by size desc, singles at the bottom
+    const groups={};
+    jobs.forEach(j=>{const k=groupKey(j);if(!groups[k])groups[k]=[];groups[k].push(j);});
+    const sorted=Object.entries(groups).sort((a,b)=>b[1].length-a[1].length);
+    let colorIdx=0;
+    sorted.forEach(([key,gjobs])=>{
+      if(gjobs.length<2){
+        // Singles — no colour, no header
+        gjobs.forEach(j=>html+=mkRow(j));
+        return;
+      }
+      const c=GROUP_COLORS[colorIdx%GROUP_COLORS.length];colorIdx++;
+      // Group header
+      const label=locFilters.has('col')&&locFilters.has('del')
+        ?key.replace('||',' → ')
+        :key;
+      html+=`<tr class="section-row"><td colspan="11" style="border-left:3px solid ${c.border};color:${c.label};background:${c.bg}">${label} — ${gjobs.length} jobs</td></tr>`;
+      gjobs.forEach(j=>html+=mkRow(j,`background:${c.bg};border-left:3px solid ${c.border}`));
+    });
+  } else if(typeFilter==='all'){
     const tr=jobs.filter(j=>j.type==='Trailered'),dr=jobs.filter(j=>j.type!=='Trailered');
-    if(tr.length){html+=`<tr class="section-row"><td colspan="11">Trailered - ${tr.length} jobs</td></tr>`;tr.forEach(j=>html+=mkRow(j));}
-    if(dr.length){html+=`<tr class="section-row"><td colspan="11">Driven / Other - ${dr.length} jobs</td></tr>`;dr.forEach(j=>html+=mkRow(j));}
-  }else{jobs.forEach(j=>html+=mkRow(j));}
+    if(tr.length){html+=`<tr class="section-row"><td colspan="11">Trailered — ${tr.length} jobs</td></tr>`;tr.forEach(j=>html+=mkRow(j));}
+    if(dr.length){html+=`<tr class="section-row"><td colspan="11">Driven / Other — ${dr.length} jobs</td></tr>`;dr.forEach(j=>html+=mkRow(j));}
+  } else {
+    jobs.sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return da-db;});
+    jobs.forEach(j=>html+=mkRow(j));
+  }
   tbody.innerHTML=html;
 }
 
@@ -1236,7 +1336,15 @@ function updateStats(){
   document.getElementById('tc-arriving').textContent=arriving;
   document.getElementById('tc-schedule').textContent=totalSched;
 }
-function render(){renderPool();renderRuns();updateStats();if(currentMainTab==='progress')renderProgress();if(currentMainTab==='arriving')renderArriving();if(currentMainTab==='schedule')renderSchedule();if(currentMainTab==='alljobs')renderAllJobs();}
+function render(){
+  renderPool();
+  renderRuns();
+  updateStats();
+  renderProgress();
+  renderArriving();
+  renderSchedule();
+  renderAllJobs();
+}
 
 // === CONFIRM DIALOG ===
 function showConfirm(title,text,buttons){
@@ -1364,6 +1472,19 @@ function markFailed(jobId){
   document.getElementById('failed-delivery').value=j.to||'';
   document.getElementById('failed-notes').value='';
   document.getElementById('failed-overlay').classList.remove('hidden');
+}
+async function markFailedOnly(){
+  const j=allJobs.find(x=>x.id===_failedJobId);if(!j)return;
+  j.status='Failed';j._done=true;j._doneStatus='Failed';
+  if(j.airtableId){try{await atUpdate(j.airtableId,{Status:'Failed'});}catch(e){}}
+  if(j.runId){
+    const day=j.runDay;
+    if(day&&dayRuns[day]){const run=dayRuns[day].find(r=>r.id===j.runId);if(run)run.jobIds=run.jobIds.filter(id=>id!==j.id);}
+    j.runId=null;j.runDay=null;
+    clearJobRun(j);
+  }
+  closeFailedDialog();
+  render();
 }
 function closeFailedDialog(){
   document.getElementById('failed-overlay').classList.add('hidden');
@@ -1709,41 +1830,192 @@ function genAll(){
 }
 
 // === PDF ===
+const ptlRGB=[45,190,168];
+function pdfHeader(doc,W,M,runName,dayLabel,driverName,jobCount){
+  doc.setFillColor(...ptlRGB);doc.rect(0,0,W,18,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');
+  doc.text('Premier Travel Logistics',M,11);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Run card',M,16);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(runName,W-M,11,{align:'right'});
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(dayLabel,W-M,16,{align:'right'});
+  doc.setFillColor(245,245,245);doc.rect(0,18,W,9,'F');
+  doc.setTextColor(80,80,80);doc.setFontSize(8);
+  doc.text('Driver: '+driverName,M,24);
+  doc.text('Jobs: '+jobCount,M+50,24);
+  doc.text('Generated: '+new Date().toLocaleDateString('en-GB'),W-M,24,{align:'right'});
+  doc.setDrawColor(...ptlRGB);doc.setLineWidth(0.4);doc.line(M,28,W-M,28);
+}
+function pdfFooter(doc,W,M,page){
+  doc.setFillColor(...ptlRGB);doc.rect(0,doc.internal.pageSize.height-10,W,10,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(7);
+  doc.text('Premier Travel Logistics',M,doc.internal.pageSize.height-4);
+  doc.text('Page '+page,W-M,doc.internal.pageSize.height-4,{align:'right'});
+}
+function pdfJobStop(doc,j,i,y,M,W,isReturn){
+  const ptl=ptlRGB;
+  if(isReturn){doc.setFillColor(167,139,250);}else{doc.setFillColor(...ptl);}
+  doc.circle(M+2.5,y+2.5,2.5,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+  doc.text(isReturn?'R'+(i+1):String(i+1),M+2.5,y+3.3,{align:'center'});
+  // Model + Reg bold side by side
+  doc.setTextColor(20,20,20);doc.setFontSize(10);doc.setFont('helvetica','bold');
+  const modelText=j.model+(j.bringToUnit&&!isReturn?' [BRING TO UNIT]':'');
+  doc.text(modelText,M+7,y+2.5);
+  const modelW=doc.getTextWidth(modelText);
+  doc.setFontSize(9);doc.setFont('helvetica','bold');
+  doc.setTextColor(60,60,60);
+  const chassis=isReturn?j.chassis:j.chassis;
+  doc.text(chassis,M+7+modelW+3,y+2.5);
+  // Route
+  doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+  const from=isReturn?'Unit':(j.displayFrom||j.from||'-');
+  const to=isReturn?j.to:(j.bringToUnit?'Unit':j.to||'-');
+  doc.text(from+' → '+to,M+7,y+8);
+  // Notes
+  if(j.notes){
+    doc.setFillColor(250,238,218);
+    const nw=Math.min(W-M-M-7,j.notes.length*1.7+6);
+    doc.roundedRect(M+7,y+11,nw,5,1,1,'F');
+    doc.setTextColor(133,79,11);doc.setFontSize(7);
+    doc.text('! '+j.notes.substring(0,50),M+8,y+14.5);
+  }
+  // Bring to Unit badge
+  if(j.bringToUnit&&!isReturn){
+    doc.setFillColor(167,139,250);doc.roundedRect(M+7,y+11,22,5,1,1,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.text('Bring to Unit',M+8,y+14.5);
+  }
+  doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);
+  doc.line(M,y+(j.notes||j.bringToUnit?19:12),W-M,y+(j.notes||j.bringToUnit?19:12));
+  return j.notes||j.bringToUnit?22:15;
+}
+
 function buildRunPDFDoc(runsArr,dayLabel){
-  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210,M=14,ptl=[45,190,168];
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,M=14;
+  let pageNum=1;
   runsArr.forEach((run,ri)=>{
-    if(ri>0)doc.addPage();
+    if(ri>0){doc.addPage();pageNum++;}
     const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
     const returnJobs=allJobs.filter(j=>j.returnLeg&&j.returnLeg.runId===run.id&&j.returnLeg.runDay===currentDay);
     const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
-    doc.setFillColor(...ptl);doc.rect(0,0,W,18,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.text('Premier Travel Logistics',M,10);
-    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text('Run Card',M,15);
-    doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(run.name,W-M,10,{align:'right'});
-    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text(dayLabel+(driver?' - '+driver.name:''),W-M,15,{align:'right'});
-    doc.setTextColor(60,60,60);doc.setFillColor(245,245,245);doc.rect(0,18,W,10,'F');
-    doc.setFontSize(9);doc.text('Driver: '+(driver?driver.name:'Unassigned'),M,24);doc.text('Jobs: '+rj.length,85,24);doc.text('Generated: '+new Date().toLocaleDateString('en-GB'),W-M,24,{align:'right'});
-    doc.setDrawColor(...ptl);doc.setLineWidth(0.5);doc.line(M,30,W-M,30);
-    let y=36;
+    pdfHeader(doc,W,M,run.name,dayLabel,driver?driver.name:'Unassigned',rj.length+returnJobs.length);
+    let y=33;
     rj.forEach((j,i)=>{
-      if(y>265){doc.addPage();y=20;}
-      doc.setFillColor(...ptl);doc.circle(M+3,y+3,3,'F');doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');doc.text(String(i+1),M+3,y+4,{align:'center'});
-      doc.setTextColor(20,20,20);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(j.model+(j.bringToUnit?' [BRING TO UNIT]':''),M+8,y+2);
-      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);doc.text(j.chassis+' - '+j.customer,M+8,y+7);
-      doc.setTextColor(60,60,60);doc.setFontSize(9);doc.text((j.displayFrom||j.from||'-')+' > '+(j.bringToUnit?'Unit':j.to||'-'),M+8,y+12);
-      let xOff=M+8;
-      const pw=j.type==='Trailered'?18:j.type==='Sub-Contractor'?24:14;
-      doc.setFillColor(j.type==='Trailered'?220:220,j.type==='Trailered'?240:235,j.type==='Trailered'?232:248);
-      doc.roundedRect(xOff,y+14,pw,5,1,1,'F');doc.setTextColor(j.type==='Trailered'?15:24,j.type==='Trailered'?110:95,j.type==='Trailered'?86:165);doc.setFontSize(7);doc.text(j.type,xOff+1,y+17.5);xOff+=pw+3;
-      if(j.delDate){doc.setFillColor(220,235,248);doc.setTextColor(24,95,165);doc.roundedRect(xOff,y+14,24,5,1,1,'F');doc.setFontSize(7);doc.text('Del: '+fmtDate(j.delDate),xOff+1,y+17.5);xOff+=26;}
-      if(j.notes){const nw=Math.min(70,j.notes.length*1.8+4);doc.setFillColor(250,238,218);doc.setTextColor(133,79,11);doc.roundedRect(xOff,y+14,nw,5,1,1,'F');doc.setFontSize(7);doc.text('! '+j.notes.substring(0,38),xOff+1,y+17.5);}
-      doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);doc.line(M,y+22,W-M,y+22);y+=25;
+      if(y>265){pdfFooter(doc,W,M,pageNum);doc.addPage();pageNum++;y=20;}
+      y+=pdfJobStop(doc,j,i,y,M,W,false);
     });
-    doc.setFillColor(...ptl);doc.rect(0,285,W,12,'F');doc.setTextColor(255,255,255);doc.setFontSize(8);doc.text('Premier Travel Logistics',M,292);doc.text('Page '+(ri+1),W-M,292,{align:'right'});
+    if(returnJobs.length){
+      doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...ptlRGB);
+      doc.text('RETURN DELIVERIES',M,y+4);y+=8;
+      returnJobs.forEach((j,i)=>{
+        if(y>265){pdfFooter(doc,W,M,pageNum);doc.addPage();pageNum++;y=20;}
+        y+=pdfJobStop(doc,j,i,y,M,W,true);
+      });
+    }
+    pdfFooter(doc,W,M,pageNum);
   });
   return doc;
 }
+
+function buildDayPDFDoc(dayLabel){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const W=297,H=210,M=14,ptl=ptlRGB;
+  // Header
+  doc.setFillColor(...ptl);doc.rect(0,0,W,16,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');
+  doc.text('Premier Travel Logistics',M,10);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Daily run plan',M,15);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(dayLabel,W-M,10,{align:'right'});
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Generated: '+new Date().toLocaleDateString('en-GB'),W-M,15,{align:'right'});
+  // Sub-header
+  const runs=dayRuns[currentDay].filter(r=>r.jobIds.length>0);
+  const totalJobs=runs.reduce((a,r)=>a+r.jobIds.length,0);
+  doc.setFillColor(245,245,245);doc.rect(0,16,W,8,'F');
+  doc.setTextColor(80,80,80);doc.setFontSize(8);
+  doc.text('Total jobs: '+totalJobs,M,21.5);
+  doc.text('Drivers: '+runs.filter(r=>r.driverId).length,M+36,21.5);
+  doc.text('Runs: '+runs.length,M+65,21.5);
+  doc.setDrawColor(...ptl);doc.setLineWidth(0.4);doc.line(M,25,W-M,25);
+  let y=30,pageNum=1;
+  runs.forEach((run,ri)=>{
+    const driver=run.driverId?DRIVERS.find(d=>d.id===run.driverId):null;
+    const driverName=driver?driver.name:'Unassigned';
+    const av=driver?driver.av:driverName.slice(0,2).toUpperCase();
+    const rj=run.jobIds.map(id=>allJobs.find(j=>j.id===id)).filter(Boolean);
+    if(!rj.length)return;
+    // Check space
+    const needed=10+rj.length*11;
+    if(y+needed>H-14){
+      doc.setFillColor(...ptl);doc.rect(0,H-10,W,10,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(7);
+      doc.text('Premier Travel Logistics',M,H-4);doc.text('Page '+pageNum,W-M,H-4,{align:'right'});
+      doc.addPage();pageNum++;
+      // Re-draw header on new page
+      doc.setFillColor(...ptl);doc.rect(0,0,W,16,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.text('Premier Travel Logistics',M,10);
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Daily run plan — continued',M,15);
+      doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(dayLabel,W-M,10,{align:'right'});
+      doc.setDrawColor(...ptl);doc.setLineWidth(0.4);doc.line(M,18,W-M,18);
+      y=24;
+    }
+    // Driver section header
+    doc.setFillColor(...ptl,0.15);
+    doc.setFillColor(225,245,238);doc.rect(M,y,W-M*2,7,'F');
+    doc.setFillColor(...ptl);doc.circle(M+4,y+3.5,3.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');doc.text(av,M+4,y+4.3,{align:'center'});
+    doc.setTextColor(15,110,86);doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text(driverName+' — '+run.name,M+10,y+4.5);
+    doc.setTextColor(100,100,100);doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text(rj.length+' job'+(rj.length!==1?'s':''),M+10+doc.getTextWidth(driverName+' — '+run.name)+4,y+4.5);
+    y+=9;
+    // Job rows
+    rj.forEach((j,i)=>{
+      // Number circle
+      doc.setFillColor(...ptl);doc.circle(M+2,y+2.5,2,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(6);doc.setFont('helvetica','bold');doc.text(String(i+1),M+2,y+3.1,{align:'center'});
+      // Model + Reg
+      doc.setTextColor(20,20,20);doc.setFontSize(9);doc.setFont('helvetica','bold');
+      doc.text(j.model,M+6,y+3.5);
+      const mw=doc.getTextWidth(j.model);
+      doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(60,60,60);
+      doc.text(j.chassis,M+6+mw+2,y+3.5);
+      // Route
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+      const from=j.displayFrom||j.from||'-';
+      const to=j.bringToUnit?'Unit':j.to||'-';
+      doc.text(from+' → '+to,M+65,y+3.5);
+      // Notes
+      if(j.notes){
+        doc.setFillColor(250,238,218);
+        const nw=Math.min(60,j.notes.length*1.5+4);
+        doc.roundedRect(M+148,y+0.5,nw,5,1,1,'F');
+        doc.setTextColor(133,79,11);doc.setFontSize(6.5);
+        doc.text('! '+j.notes.substring(0,36),M+149,y+3.5);
+      }
+      if(j.bringToUnit){
+        doc.setFillColor(167,139,250);doc.roundedRect(M+148,y+0.5,20,5,1,1,'F');
+        doc.setTextColor(255,255,255);doc.setFontSize(6.5);doc.text('Bring to Unit',M+149,y+3.5);
+      }
+      // Driver name far right
+      doc.setTextColor(...ptl);doc.setFontSize(8);doc.setFont('helvetica','bold');
+      doc.text(driverName,W-M,y+3.5,{align:'right'});
+      doc.setDrawColor(230,230,230);doc.setLineWidth(0.2);doc.line(M,y+6,W-M,y+6);
+      y+=9;
+    });
+    // Driver divider
+    if(ri<runs.length-1){
+      doc.setDrawColor(...ptl);doc.setLineWidth(0.4);doc.line(M,y+2,W-M,y+2);y+=6;
+    }
+  });
+  // Footer
+  doc.setFillColor(...ptl);doc.rect(0,H-10,W,10,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(7);
+  doc.text('Premier Travel Logistics',M,H-4);doc.text('Page '+pageNum,W-M,H-4,{align:'right'});
+  return doc;
+}
+
 function exportRunPDF(){exportRunPDFById(document.getElementById('m-pdf-btn').dataset.runid);}
 function exportRunPDFById(runId){
   const day=DAYS.find(d=>dayRuns[d].some(r=>r.id===runId));if(!day)return;
@@ -1754,7 +2026,7 @@ function exportRunPDFById(runId){
 function exportDayPDF(){
   const runs=dayRuns[currentDay].filter(r=>r.jobIds.length>0);
   if(!runs.length){alert('No runs on '+DAY_NAMES[currentDay]);return;}
-  buildRunPDFDoc(runs,DAY_NAMES[currentDay]).save('PTL-'+DAY_NAMES[currentDay]+'.pdf');
+  buildDayPDFDoc(DAY_NAMES[currentDay]).save('PTL-'+DAY_NAMES[currentDay]+'-Day.pdf');
 }
 
 // === DIVIDER ===
