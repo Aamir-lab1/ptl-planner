@@ -275,23 +275,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .driver-inline-select{background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--font);font-size:12px;outline:none}
 .driver-inline-select:focus{border-color:var(--ptl)}
 /* PIN screen */
-.pin-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:20px}
-.pin-screen.hidden{display:none}
-.pin-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px;width:320px;text-align:center}
-.pin-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
-.pin-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
-.pin-user-select{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
-.pin-user-btn{font-size:12px;font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
-.pin-user-btn:hover{border-color:rgba(45,190,168,.35);color:var(--text)}
-.pin-user-btn.active{background:var(--ptl-dim);color:var(--ptl);border-color:rgba(45,190,168,.35)}
-.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
-.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--border2);transition:background .15s}
-.pin-dot.filled{background:var(--ptl)}
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:220px;margin:0 auto}
-.pin-key{height:52px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:18px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--font)}
-.pin-key:hover{background:var(--ptl-dim);border-color:rgba(45,190,168,.35);color:var(--ptl)}
-.pin-key:active{transform:scale(.95)}
-.pin-error{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
 /* Session pill */
 .session-pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--ptl-dim);color:var(--ptl);border:1px solid rgba(45,190,168,.25);cursor:pointer;transition:all .15s}
 .session-pill:hover{border-color:var(--ptl)}
@@ -328,33 +311,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 </style>
 </head>
 <body>
-<!-- PIN SCREEN -->
-<div class="pin-screen" id="pin-screen">
-  <div class="pin-card">
-    <div class="pin-title">PTL Planner</div>
-    <div class="pin-sub">Select your name and enter your PIN</div>
-    <div class="pin-user-select" id="pin-user-select"></div>
-    <div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
-    <div class="pin-pad">
-      <button class="pin-key" onclick="pinKey(1)">1</button><button class="pin-key" onclick="pinKey(2)">2</button><button class="pin-key" onclick="pinKey(3)">3</button>
-      <button class="pin-key" onclick="pinKey(4)">4</button><button class="pin-key" onclick="pinKey(5)">5</button><button class="pin-key" onclick="pinKey(6)">6</button>
-      <button class="pin-key" onclick="pinKey(7)">7</button><button class="pin-key" onclick="pinKey(8)">8</button><button class="pin-key" onclick="pinKey(9)">9</button>
-      <button class="pin-key" onclick="pinKey(-2)" style="font-size:12px">CLR</button><button class="pin-key" onclick="pinKey(0)">0</button><button class="pin-key" onclick="pinKey(-1)" style="font-size:14px">DEL</button>
-    </div>
-    <div class="pin-error" id="pin-error"></div>
-  </div>
-</div>
-<!-- MAIN APP -->
-<div id="main-app" style="display:none">
-<div class="offline-banner" id="offline-banner">&#9888; Working from cached data — Airtable unreachable. Changes will retry when reconnected.</div>
-<div class="header">
+<body>
   <div class="header-brand">
     <img src="data:image/jpeg;base64,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" class="header-logo" alt="PTL" />
     <div class="header-name">PTL<span>/</span>Planner</div>
     <div class="date-pill" id="hdr-date"></div>
   </div>
   <div style="display:flex;gap:7px;align-items:center">
-    <span class="session-pill" id="session-pill" onclick="lockApp()" title="Click to lock">&#128100; <span id="session-name"></span></span>
+    <span class="session-pill" id="session-pill">&#128100; <span id="session-name"></span></span>
     <div class="sync-btn" id="sync-btn" onclick="loadJobs()">
       <div class="sync-dot" id="sync-dot"></div>
       <span id="sync-label">Connecting...</span>
@@ -498,8 +462,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       <option value="Recovery">Recovery</option>
     </select>
     <span id="aj-count" style="font-size:11px;color:var(--muted)"></span>
+    <button class="btn btn-ghost btn-sm" onclick="toggleColManager()" style="margin-left:auto">&#9776; Columns</button>
   </div>
-  <div class="alljobs-wrap" id="alljobs-content"></div>
+  <div id="aj-col-manager" style="display:none;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Drag to reorder. Click eye to hide/show.</div>
+    <div id="aj-col-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="resetColPrefs()">Reset to default</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div class="alljobs-wrap" id="alljobs-content" style="flex:1;overflow-y:auto;overflow-x:auto"></div>
+  </div>
 </div>
 <!-- BOOKING FORM -->
 <div class="view" id="view-booking">
@@ -642,9 +616,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
       </div>
       <div id="rep-inv-preview" style="font-size:12px;color:var(--muted)"></div>
     </div>
+    <div class="settings-section" style="max-width:700px">
+      <div class="settings-title">Full Data Export</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Export all Airtable records within a date range — all fields, no status filtering. Useful for reconciliation or accountant use.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">
+        <div>
+          <div class="settings-label">Filter by</div>
+          <select class="report-filter-input" id="rep-raw-datefield" style="width:180px">
+            <option value="date">Date Booked</option>
+            <option value="delDate">Actual Delivery Date</option>
+          </select>
+        </div>
+        <div>
+          <div class="settings-label">From date</div>
+          <input class="report-filter-input" type="date" id="rep-raw-from" style="width:140px" />
+        </div>
+        <div>
+          <div class="settings-label">To date</div>
+          <input class="report-filter-input" type="date" id="rep-raw-to" style="width:140px" />
+        </div>
+        <button class="btn btn-primary" onclick="exportRawDataExcel()">&#8659; Export All Data</button>
+      </div>
+      <div id="rep-raw-preview" style="font-size:12px;color:var(--muted)"></div>
+    </div>
   </div>
 </div>
-<!-- SETTINGS -->
 <div class="view" id="view-settings">
   <div class="settings-scroll">
     <div class="settings-section">
@@ -775,7 +771,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   </div>
 </div>
 
-</div><!-- /main-app -->
 <script>
 // === CONFIG ===
 const AIRTABLE_TOKEN='';
@@ -798,69 +793,7 @@ let selectedJobId=null,filterText='',statusFilter='all',typeFilter='all',locFilt
 let zoomLevel=1,runZoomLevel=1,currentMainTab='plan',currentDay='mon';
 let autoTimer=null,jidCounter=0,runCounter=0,openPickerRunId=null;
 let ajFilterText='',ajStatusFilter='',ajTypeFilter='';
-
-// === PIN / SESSION SYSTEM ===
-const MASTER_PIN='372396';
-const DEFAULT_USERS=[
-  {name:'Aamir',pin:'0000'},{name:'Liam',pin:'0000'},{name:'Dave',pin:'0000'},{name:'Anna',pin:'0000'},{name:'Jean-Michel',pin:'0000'}
-];
-let currentUser=null;
-let pinEntry='';
-let pinSelectedUser=null;
-
-function getUsers(){
-  try{const u=localStorage.getItem('ptl_users');return u?JSON.parse(u):null;}catch(e){return null;}
-}
-function saveUsers(users){localStorage.setItem('ptl_users',JSON.stringify(users));}
-function ensureUsers(){if(!getUsers())saveUsers(DEFAULT_USERS);return getUsers();}
-
-function renderPinScreen(){
-  const users=ensureUsers();
-  const sel=document.getElementById('pin-user-select');
-  sel.innerHTML=users.map(u=>`<button class="pin-user-btn${pinSelectedUser===u.name?' active':''}" onclick="selectPinUser('${u.name}')">${u.name}</button>`).join('');
-  updatePinDots();
-}
-function selectPinUser(name){
-  pinSelectedUser=name;pinEntry='';
-  document.getElementById('pin-error').textContent='';
-  renderPinScreen();
-}
-function updatePinDots(){
-  for(let i=0;i<4;i++){
-    const dot=document.getElementById('pd'+i);
-    if(dot)dot.className='pin-dot'+(i<pinEntry.length?' filled':'');
-  }
-}
-function pinKey(k){
-  if(!pinSelectedUser){document.getElementById('pin-error').textContent='Select your name first';return;}
-  if(k===-2){pinEntry='';document.getElementById('pin-error').textContent='';updatePinDots();return;}
-  if(k===-1){pinEntry=pinEntry.slice(0,-1);updatePinDots();return;}
-  if(pinEntry.length>=4)return;
-  pinEntry+=String(k);
-  updatePinDots();
-  if(pinEntry.length===4){
-    const users=getUsers();
-    const user=users.find(u=>u.name===pinSelectedUser);
-    if(user&&user.pin===pinEntry){
-      currentUser=user.name;
-      document.getElementById('session-name').textContent=currentUser;
-      document.getElementById('pin-screen').classList.add('hidden');
-      document.getElementById('main-app').style.display='';
-      initApp();
-    }else{
-      document.getElementById('pin-error').textContent='Incorrect PIN';
-      pinEntry='';
-      setTimeout(updatePinDots,300);
-    }
-  }
-}
-function lockApp(){
-  currentUser=null;pinEntry='';pinSelectedUser=null;
-  document.getElementById('pin-screen').classList.remove('hidden');
-  document.getElementById('main-app').style.display='none';
-  if(autoTimer)clearTimeout(autoTimer);
-  renderPinScreen();
-}
+let currentUser='PTL';
 
 function initApp(){
   document.getElementById('hdr-date').textContent=TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
@@ -871,12 +804,6 @@ function initApp(){
   loadDrivers().then(()=>loadJobs());
 }
 
-// Check if already authenticated (session still valid)
-function checkSession(){
-  renderPinScreen();
-}
-
-// === COLLAPSIBLE SECTIONS ===
 function toggleCollapse(id){
   const body=document.getElementById(id);
   const arrow=document.getElementById('arrow-'+id);
@@ -1714,9 +1641,14 @@ function renderRuns(){
 
 // === STATS ===
 function updateStats(){
+  // Use dayRuns as source of truth for assigned jobs
+  const assignedIds=new Set();
+  DAYS.forEach(day=>dayRuns[day].forEach(r=>r.jobIds.forEach(id=>assignedIds.add(id))));
+  // Also count return legs
+  allJobs.forEach(j=>{if(j.returnLeg)assignedIds.add(j.id);});
+  const inRuns=assignedIds.size;
   const plan=allJobs.filter(j=>PLAN_STATUSES.includes(j.status));
-  const unassigned=plan.filter(j=>!j.runId).length;
-  const inRuns=plan.filter(j=>j.runId).length;
+  const unassigned=plan.filter(j=>!assignedIds.has(j.id)).length;
   const prog=allJobs.filter(j=>j.status==='In Progress').length;
   const slaAt=plan.filter(j=>slaInfo(j).cls==='sla-over').length;
   const arriving=getArrivingJobs().length;
@@ -1765,27 +1697,36 @@ function renderProgress(){
   let html='';
   Object.entries(byDriver).forEach(([driver,jobs])=>{
     const d=DRIVERS.find(x=>x.name.toLowerCase()===driver.toLowerCase());
-    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:220px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
+    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:240px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
       const isUnit=j.bringToUnit;
       const isDriven=j.type==='Driven';
       const fuelVal=j.fuelCharge!=null?j.fuelCharge:'';
       const fuelCell=isDriven
-        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">✓</span></div>`
+        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">&#10003;</span></div>`
         :`<span style="font-size:11px;color:var(--muted)">N/A</span>`;
+      const deliveryDisplay=isUnit
+        ?`<span style="color:var(--purple);font-weight:500">Unit</span>`
+        :`<span style="color:var(--muted)">${j.to}</span>`;
       const actionCell=j._done
         ?`<span class="sla-pill sla-ok">&#10003; ${j._doneStatus}</span>`
         :`<div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" onclick="markComplete('${j.id}')">Complete</button>
+            <button class="btu-btn${isUnit?' on':''}" onclick="toggleProgressBringToUnit('${j.id}')" title="Toggle bring to unit">&#8594; Unit</button>
             <button class="btn btn-ghost btn-sm" onclick="moveToUnplanned('${j.id}')">Unplan</button>
             <button class="btn btn-danger btn-sm" onclick="markFailed('${j.id}')">Failed</button>
           </div>`;
-      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td style="color:${isUnit?'var(--purple)':'var(--muted)'}${isUnit?';font-weight:500':''}">${isUnit?j.to+' / Unit':j.to}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
+      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td>${deliveryDisplay}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
     }).join('')}</tbody></table></div></div>`;
   });
   c.innerHTML=html;
 }
 
-function markComplete(jobId){
+function toggleProgressBringToUnit(jobId){
+  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
+  j.bringToUnit=!j.bringToUnit;
+  // Note: deliberately does NOT update Airtable delivery field — app display only
+  renderProgress();
+}
   const j=allJobs.find(x=>x.id===jobId);if(!j)return;
   if(j.bringToUnit){
     showConfirm('Job completed - '+j.model,'Was this vehicle delivered to <b>'+j.to+'</b> or brought back to the <b>Unit</b>?',[
@@ -2037,6 +1978,86 @@ function filterAllJobs(v){
   ajTypeFilter=document.getElementById('aj-type-filter').value;
   renderAllJobs();
 }
+// === ALL JOBS COLUMN MANAGEMENT ===
+const ALL_COLS_DEF=[
+  {key:'status',label:'Status',type:'select',opts:STATUS_OPTS,field:'Status',w:'140px'},
+  {key:'date',label:'Date Booked',type:'date',field:'Date Booked',w:'110px'},
+  {key:'delDate',label:'Actual Del. Date',type:'date',field:'Actual Delivery Date',w:'130px'},
+  {key:'bookingSource',label:'Source',type:'select',opts:SOURCE_OPTS,field:'Booking Source',w:'110px'},
+  {key:'customer',label:'Customer',type:'text',field:'Customer',w:'130px'},
+  {key:'from',label:'Collection',type:'text',field:'Collection Location',w:'150px'},
+  {key:'availFrom',label:'Avail. From',type:'datetime',field:'Collection Available From',w:'130px'},
+  {key:'to',label:'Delivery',type:'text',field:'Delivery Location',w:'150px'},
+  {key:'model',label:'Model',type:'text',field:'Vehicle Model',w:'110px'},
+  {key:'chassis',label:'Reg/Vin',type:'text',field:'Reg/Vin',w:'110px'},
+  {key:'type',label:'Move Type',type:'select',opts:MOVE_OPTS,field:'Movement Type',w:'120px'},
+  {key:'charge',label:'Charge',type:'text',field:'Movement Charge',w:'90px'},
+  {key:'fuelCharge',label:'Fuel Charge',type:'text',field:'Fuel Charge',w:'90px'},
+  {key:'notes',label:'Notes',type:'text',field:'Notes',w:'180px'},
+  {key:'confirmedBy',label:'Confirmed By',type:'text',field:'Confirmed By',w:'120px'},
+  {key:'weekNo',label:'Week No',type:'text',field:'Week No.',w:'80px'},
+  {key:'invoiceStatus',label:'Invoice Status',type:'text',field:'Invoice Status',w:'120px'},
+  {key:'invoiceText',label:'Invoice Text',type:'text',field:'Invoice Text',w:'180px'},
+  {key:'poNumber',label:'PO Number',type:'text',field:'PO Number',w:'110px'},
+  {key:'direction',label:'Direction',type:'text',field:'Direction',w:'100px'},
+  {key:'deliveryRegion',label:'Del. Region',type:'text',field:'Delivery Region',w:'110px'},
+  {key:'collectionRegion',label:'Col. Region',type:'text',field:'Collection Region',w:'110px'},
+];
+function getColPrefsKey(){return'ptl_aj_cols_'+(currentUser||'default');}
+function getColPrefs(){
+  try{const p=localStorage.getItem(getColPrefsKey());return p?JSON.parse(p):null;}catch(e){return null;}
+}
+function saveColPrefs(prefs){localStorage.setItem(getColPrefsKey(),JSON.stringify(prefs));}
+function getActiveCols(){
+  const prefs=getColPrefs();
+  if(!prefs)return ALL_COLS_DEF.filter((_,i)=>i<15); // default: first 15
+  // Apply saved order and visibility
+  const result=[];
+  prefs.forEach(p=>{const col=ALL_COLS_DEF.find(c=>c.key===p.key);if(col&&!p.hidden)result.push(col);});
+  // Add any new cols not in prefs
+  ALL_COLS_DEF.forEach(col=>{if(!prefs.find(p=>p.key===col.key))result.push(col);});
+  return result;
+}
+function resetColPrefs(){localStorage.removeItem(getColPrefsKey());renderColManager();renderAllJobs();}
+let colManagerOpen=false;
+function toggleColManager(){
+  colManagerOpen=!colManagerOpen;
+  document.getElementById('aj-col-manager').style.display=colManagerOpen?'block':'none';
+  if(colManagerOpen)renderColManager();
+}
+function renderColManager(){
+  const list=document.getElementById('aj-col-list');if(!list)return;
+  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+  list.innerHTML=prefs.map((p,idx)=>{
+    const col=ALL_COLS_DEF.find(c=>c.key===p.key);if(!col)return'';
+    return`<div style="display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:3px 8px;font-size:11px;cursor:grab" draggable="true" data-key="${p.key}" ondragstart="colDragStart(event,'${p.key}')" ondragover="colDragOver(event)" ondrop="colDrop(event,'${p.key}')">
+      <span style="color:var(--muted);cursor:grab">&#8597;</span>
+      <span>${col.label}</span>
+      <button onclick="toggleColVisibility('${p.key}')" style="background:none;border:none;cursor:pointer;color:${p.hidden?'var(--muted)':'var(--ptl)'};font-size:13px;padding:0;line-height:1">${p.hidden?'&#128065;&#xFE0E;':'&#128065;'}</button>
+    </div>`;
+  }).join('');
+}
+let dragColKey=null;
+function colDragStart(e,key){dragColKey=key;e.dataTransfer.effectAllowed='move';}
+function colDragOver(e){e.preventDefault();}
+function colDrop(e,targetKey){
+  e.preventDefault();
+  if(!dragColKey||dragColKey===targetKey)return;
+  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+  const fromIdx=prefs.findIndex(p=>p.key===dragColKey);
+  const toIdx=prefs.findIndex(p=>p.key===targetKey);
+  if(fromIdx<0||toIdx<0)return;
+  const item=prefs.splice(fromIdx,1)[0];
+  prefs.splice(toIdx,0,item);
+  saveColPrefs(prefs);dragColKey=null;
+  renderColManager();renderAllJobs();
+}
+function toggleColVisibility(key){
+  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+  const p=prefs.find(x=>x.key===key);if(p)p.hidden=!p.hidden;
+  saveColPrefs(prefs);renderColManager();renderAllJobs();
+}
+
 function renderAllJobs(){
   const c=document.getElementById('alljobs-content');
   let jobs=allJobs.slice();
@@ -2046,24 +2067,8 @@ function renderAllJobs(){
   const countEl=document.getElementById('aj-count');
   if(countEl)countEl.textContent=jobs.length+' record'+(jobs.length!==1?'s':'');
   if(!jobs.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">&#128196;</div><div>No records found</div></div>';return;}
-  const cols=[
-    {key:'status',label:'Status',type:'select',opts:STATUS_OPTS,field:'Status',w:'140px'},
-    {key:'date',label:'Date Booked',type:'date',field:'Date Booked',w:'110px'},
-    {key:'bookingSource',label:'Source',type:'select',opts:SOURCE_OPTS,field:'Booking Source',w:'110px'},
-    {key:'customer',label:'Customer',type:'text',field:'Customer',w:'130px'},
-    {key:'from',label:'Collection',type:'text',field:'Collection Location',w:'150px'},
-    {key:'availFrom',label:'Avail. From',type:'datetime',field:'Collection Available From',w:'130px'},
-    {key:'to',label:'Delivery',type:'text',field:'Delivery Location',w:'150px'},
-    {key:'delDate',label:'Req. Delivery',type:'datetime',field:'Requested Delivery Date',w:'130px'},
-    {key:'model',label:'Model',type:'text',field:'Vehicle Model',w:'110px'},
-    {key:'chassis',label:'Reg/Vin',type:'text',field:'Reg/Vin',w:'110px'},
-    {key:'type',label:'Move Type',type:'select',opts:MOVE_OPTS,field:'Movement Type',w:'120px'},
-    {key:'notes',label:'Notes',type:'text',field:'Notes',w:'180px'},
-    {key:'confirmedBy',label:'Confirmed By',type:'text',field:'Confirmed By',w:'120px'},
-    {key:'weekNo',label:'Week No',type:'text',field:'Week No.',w:'80px'},
-    {key:'invoiceStatus',label:'Invoice Status',type:'text',field:'Invoice Status',w:'120px'},
-  ];
-  let html=`<div style="overflow:auto;max-height:100%"><table class="alljobs-table"><thead><tr>${cols.map(c=>`<th style="min-width:${c.w}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
+  const cols=getActiveCols();
+  let html=`<table class="alljobs-table" style="min-width:max-content"><thead><tr>${cols.map(col=>`<th style="min-width:${col.w}">${col.label}</th>`).join('')}</tr></thead><tbody>`;
   jobs.forEach(j=>{
     html+=`<tr id="ajr-${j.airtableId}" style="${highlightedJobId===j.airtableId?'background:rgba(45,190,168,0.15)':''}">`;
     cols.forEach(col=>{
@@ -2080,8 +2085,9 @@ function renderAllJobs(){
     });
     html+=`</tr>`;
   });
-  html+=`</tbody></table></div>`;
+  html+=`</tbody></table>`;
   c.innerHTML=html;
+  if(highlightedJobId){setTimeout(()=>{const row=document.getElementById('ajr-'+highlightedJobId);if(row)row.scrollIntoView({behavior:'smooth',block:'center'});},50);}
 }
 
 function ajStartEdit(el,recordId,field,key,type){
@@ -2314,15 +2320,45 @@ function downloadCSV(csv,filename){
   URL.revokeObjectURL(url);
 }
 function initReportsTab(){
-  // Set default date range to previous Mon-Sun
   const today=new Date();
   const dayOfWeek=today.getDay();
   const lastMon=new Date(today);lastMon.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1)-7);
   const lastSun=new Date(lastMon);lastSun.setDate(lastMon.getDate()+6);
   const fmt=d=>d.toISOString().split('T')[0];
-  ['rep-mov-from','rep-inv-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastMon);});
-  ['rep-mov-to','rep-inv-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastSun);});
+  ['rep-mov-from','rep-inv-from','rep-raw-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastMon);});
+  ['rep-mov-to','rep-inv-to','rep-raw-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastSun);});
   loadDealers();
+}
+async function exportRawDataExcel(){
+  const dateField=document.getElementById('rep-raw-datefield').value;
+  const fromDate=document.getElementById('rep-raw-from').value;
+  const toDate=document.getElementById('rep-raw-to').value;
+  let jobs=allJobs.slice();
+  if(fromDate||toDate){
+    jobs=jobs.filter(j=>{
+      const val=dateField==='date'?j.date:j.delDate;
+      const d=parseDate(val);
+      if(!d)return false;
+      if(fromDate&&d<new Date(fromDate))return false;
+      if(toDate&&d>new Date(toDate+'T23:59:59'))return false;
+      return true;
+    });
+  }
+  if(!jobs.length){showError('No records found in the selected date range');return;}
+  const headers=['Date Booked','Actual Delivery Date','Status','Customer','Collection Location','Delivery Location','Vehicle Model','Reg/Vin','Movement Type','Movement Charge','Fuel Charge','Invoice Status','Invoice Text','PO Number','Week No.','Booking Source','Confirmed By','Notes','PTL Run Name','PTL Run Day','PTL Driver'];
+  let csv=headers.join(',')+'\n';
+  jobs.forEach(j=>{
+    const row=[
+      j.date,j.delDate||'',j.status,j.customer,j.from,j.to,j.model,j.chassis,
+      j.rawType||j.type,j.charge||'',j.fuelCharge!=null?j.fuelCharge:'',
+      j.invoiceStatus||'',j.invoiceText||'',j.poNumber||'',j.weekNo||'',
+      j.bookingSource||'',j.confirmedBy||'',j.notes||'',
+      j.ptlRunName||'',j.ptlRunDay||'',j.ptlDriver||''
+    ].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"');
+    csv+=row.join(',')+'\n';
+  });
+  downloadCSV(csv,'PTL-Full-Export-'+new Date().toISOString().split('T')[0]+'.csv');
+  document.getElementById('rep-raw-preview').textContent=jobs.length+' records exported.';
 }
 async function submitBooking(){
   ['bf-success','bf-error','bf-duplicate'].forEach(id=>document.getElementById(id).style.display='none');
@@ -2469,22 +2505,28 @@ function pdfJobStop(doc,j,i,y,M,W,isReturn){
   const arrW=doc.getTextWidth(' > ');
   doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);
   doc.text(to,M+7+fromW+arrW,y+8);
-  // Notes
+  // Bring to Unit badge (shown in model line, notes go below separately)
+  let extraY=0;
+  if(j.bringToUnit&&!isReturn){
+    doc.setFillColor(167,139,250);doc.roundedRect(M+7,y+11,24,5,1,1,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text('Bring to Unit',M+8,y+14.5);
+    extraY=7;
+  }
+  // Notes — placed after Bring to Unit badge if present
   if(j.notes){
+    const ny=y+11+extraY;
     doc.setFillColor(250,238,218);
     const nw=Math.min(W-M-M-7,j.notes.length*1.7+6);
-    doc.roundedRect(M+7,y+11,nw,5,1,1,'F');
-    doc.setTextColor(133,79,11);doc.setFontSize(7);
-    doc.text('! '+j.notes.substring(0,50),M+8,y+14.5);
+    doc.roundedRect(M+7,ny,nw,5,1,1,'F');
+    doc.setTextColor(133,79,11);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('! '+j.notes.substring(0,50),M+8,ny+3.5);
+    extraY+=7;
   }
-  // Bring to Unit badge
-  if(j.bringToUnit&&!isReturn){
-    doc.setFillColor(167,139,250);doc.roundedRect(M+7,y+11,22,5,1,1,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.text('Bring to Unit',M+8,y+14.5);
-  }
+  const totalH=11+extraY;
   doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);
-  doc.line(M,y+(j.notes||j.bringToUnit?19:12),W-M,y+(j.notes||j.bringToUnit?19:12));
-  return j.notes||j.bringToUnit?22:15;
+  doc.line(M,y+totalH+2,W-M,y+totalH+2);
+  return totalH+5;
 }
 
 function buildRunPDFDoc(runsArr,dayLabel){
@@ -2669,7 +2711,9 @@ setTimeout(function(){
 },500);
 
 // === INIT ===
-checkSession();
+let currentUser='PTL';
+document.getElementById('session-name').textContent=currentUser;
+initApp();
 
 </script>
 </body>
