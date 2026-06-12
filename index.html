@@ -247,6 +247,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .fuel-input-wrap span{font-size:11px;color:var(--muted)}
 .fuel-input{width:64px;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;text-align:right}
 .fuel-input:focus{color:var(--ptl)}
+.btu-toggle{font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.btu-toggle:hover{border-color:rgba(167,139,250,.4);color:var(--purple)}
+.btu-toggle.active{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.12);color:var(--purple)}
 .fuel-saved{font-size:10px;color:var(--ptl);margin-left:3px;opacity:0;transition:opacity .3s}
 .fuel-saved.show{opacity:1}
 /* Failed collection popup */
@@ -275,6 +278,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .driver-inline-select{background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--font);font-size:12px;outline:none}
 .driver-inline-select:focus{border-color:var(--ptl)}
 /* PIN screen */
+.pin-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:20px}
+.pin-screen.hidden{display:none}
+.pin-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px;width:320px;text-align:center}
+.pin-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
+.pin-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.pin-user-select{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
+.pin-user-btn{font-size:12px;font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.pin-user-btn:hover{border-color:rgba(45,190,168,.35);color:var(--text)}
+.pin-user-btn.active{background:var(--ptl-dim);color:var(--ptl);border-color:rgba(45,190,168,.35)}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--border2);transition:background .15s}
+.pin-dot.filled{background:var(--ptl)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:220px;margin:0 auto}
+.pin-key{height:52px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:18px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.pin-key:hover{background:var(--ptl-dim);border-color:rgba(45,190,168,.35);color:var(--ptl)}
+.pin-key:active{transform:scale(.95)}
+.pin-error{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
 /* Session pill */
 .session-pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--ptl-dim);color:var(--ptl);border:1px solid rgba(45,190,168,.25);cursor:pointer;transition:all .15s}
 .session-pill:hover{border-color:var(--ptl)}
@@ -319,7 +339,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <div class="date-pill" id="hdr-date"></div>
   </div>
   <div style="display:flex;gap:7px;align-items:center">
-    <span class="session-pill" id="session-pill">&#128100; <span id="session-name"></span></span>
+    <span class="session-pill" id="session-pill" onclick="lockApp()" title="Click to lock">&#128100; <span id="session-name"></span></span>
     <div class="sync-btn" id="sync-btn" onclick="loadJobs()">
       <div class="sync-dot" id="sync-dot"></div>
       <span id="sync-label">Connecting...</span>
@@ -466,15 +486,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <button class="btn btn-ghost btn-sm" onclick="toggleColManager()" style="margin-left:auto">&#9776; Columns</button>
   </div>
   <div id="aj-col-manager" style="display:none;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Drag to reorder. Click eye to hide/show.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Drag to reorder · click eye to show/hide</div>
     <div id="aj-col-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-    <div style="margin-top:8px;display:flex;gap:6px">
-      <button class="btn btn-ghost btn-sm" onclick="resetColPrefs()">Reset to default</button>
-    </div>
+    <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="resetColPrefs()">Reset to default</button></div>
   </div>
-  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-    <div class="alljobs-wrap" id="alljobs-content" style="flex:1;overflow-y:auto;overflow-x:auto"></div>
-  </div>
+  <div class="alljobs-wrap" id="alljobs-content" style="overflow-x:auto;overflow-y:auto"></div>
 </div>
 <!-- BOOKING FORM -->
 <div class="view" id="view-booking">
@@ -636,12 +652,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
           <div class="settings-label">To date</div>
           <input class="report-filter-input" type="date" id="rep-raw-to" style="width:140px" />
         </div>
-        <button class="btn btn-primary" onclick="exportRawDataExcel()">&#8659; Export All Data</button>
+        <button class="btn btn-primary" onclick="exportRawData()">&#8659; Export All Data</button>
       </div>
       <div id="rep-raw-preview" style="font-size:12px;color:var(--muted)"></div>
     </div>
   </div>
 </div>
+<!-- SETTINGS -->
 <div class="view" id="view-settings">
   <div class="settings-scroll">
     <div class="settings-section">
@@ -794,25 +811,9 @@ let selectedJobId=null,filterText='',statusFilter='all',typeFilter='all',locFilt
 let zoomLevel=1,runZoomLevel=1,currentMainTab='plan',currentDay='mon';
 let autoTimer=null,jidCounter=0,runCounter=0,openPickerRunId=null;
 let ajFilterText='',ajStatusFilter='',ajTypeFilter='';
-let currentUser='PTL';
 
-function initApp(){
-  document.getElementById('hdr-date').textContent=TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
-  updateConnDisplay();
-  document.getElementById('set-token').value=getToken();
-  document.getElementById('set-base').value=getBase();
-  document.getElementById('set-table').value=getTable();
-  loadDrivers().then(()=>loadJobs());
-}
 
-// === USER MANAGEMENT STUBS (PIN removed — kept for audit log and settings) ===
-const MASTER_PIN='372396';
-const DEFAULT_USERS=[
-  {name:'Aamir',pin:'0000'},{name:'Liam',pin:'0000'},{name:'Dave',pin:'0000'},{name:'Anna',pin:'0000'},{name:'Jean-Michel',pin:'0000'}
-];
-function getUsers(){try{const u=localStorage.getItem('ptl_users');const p=u?JSON.parse(u):null;return(p&&p.length)?p:DEFAULT_USERS;}catch(e){return DEFAULT_USERS;}}
-function saveUsers(u){try{localStorage.setItem('ptl_users',JSON.stringify(u));}catch(e){}}
-
+// === COLLAPSIBLE SECTIONS ===
 function toggleCollapse(id){
   const body=document.getElementById(id);
   const arrow=document.getElementById('arrow-'+id);
@@ -1650,10 +1651,8 @@ function renderRuns(){
 
 // === STATS ===
 function updateStats(){
-  // Use dayRuns as source of truth for assigned jobs
   const assignedIds=new Set();
   DAYS.forEach(day=>dayRuns[day].forEach(r=>r.jobIds.forEach(id=>assignedIds.add(id))));
-  // Also count return legs
   allJobs.forEach(j=>{if(j.returnLeg)assignedIds.add(j.id);});
   const inRuns=assignedIds.size;
   const plan=allJobs.filter(j=>PLAN_STATUSES.includes(j.status));
@@ -1706,36 +1705,35 @@ function renderProgress(){
   let html='';
   Object.entries(byDriver).forEach(([driver,jobs])=>{
     const d=DRIVERS.find(x=>x.name.toLowerCase()===driver.toLowerCase());
-    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:240px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
+    html+=`<div class="progress-driver-section"><div class="progress-driver-hdr"><div class="prog-av ${d?.type==='truck'?'truck':'plater'}">${d?.av||driver.slice(0,2).toUpperCase()}</div><div class="prog-name">${driver}</div><div class="prog-count">${jobs.length} job${jobs.length!==1?'s':''}</div></div><div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px"><table class="progress-table"><thead><tr><th>Model</th><th>Reg/Vin</th><th>Customer</th><th>Collection</th><th>Delivery</th><th>Type</th><th>Fuel (£)</th><th>Notes</th><th style="min-width:220px">Actions</th></tr></thead><tbody>${jobs.map(j=>{
       const isUnit=j.bringToUnit;
       const isDriven=j.type==='Driven';
       const fuelVal=j.fuelCharge!=null?j.fuelCharge:'';
       const fuelCell=isDriven
-        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">&#10003;</span></div>`
+        ?`<div class="fuel-input-wrap"><span>£</span><input class="fuel-input" id="fuel-${j.id}" type="number" step="0.01" min="0" placeholder="0.00" value="${fuelVal}" onchange="saveFuelCharge('${j.id}',this.value)" /><span class="fuel-saved" id="fuel-saved-${j.id}">✓</span></div>`
         :`<span style="font-size:11px;color:var(--muted)">N/A</span>`;
-      const deliveryDisplay=isUnit
-        ?`<span style="color:var(--purple);font-weight:500">Unit</span>`
-        :`<span style="color:var(--muted)">${j.to}</span>`;
       const actionCell=j._done
         ?`<span class="sla-pill sla-ok">&#10003; ${j._doneStatus}</span>`
         :`<div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" onclick="markComplete('${j.id}')">Complete</button>
-            <button class="btu-btn${isUnit?' on':''}" onclick="toggleProgressBringToUnit('${j.id}')" title="Toggle bring to unit">&#8594; Unit</button>
+            <button class="btu-toggle${j.bringToUnit?' active':''}" onclick="toggleProgressBTU('${j.id}')" title="Toggle Bring to Unit">&#8594; Unit</button>
             <button class="btn btn-ghost btn-sm" onclick="moveToUnplanned('${j.id}')">Unplan</button>
             <button class="btn btn-danger btn-sm" onclick="markFailed('${j.id}')">Failed</button>
           </div>`;
-      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td>${deliveryDisplay}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
+      return`<tr class="${j._done?'done-row':''}"><td style="font-weight:600">${j.model}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${j.chassis}</td><td style="color:var(--muted)">${j.customer}</td><td style="color:var(--muted)">${j.from}</td><td style="color:${j.bringToUnit?'var(--purple)':'var(--muted)'};font-weight:${j.bringToUnit?'500':'400'}">${j.bringToUnit?'Unit':j.to}</td><td><span class="type-pill ${typePillClass(j.type)}">${j.type}</span></td><td>${fuelCell}</td><td style="font-size:10px;color:var(--amber);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes?'&#9888; '+j.notes:''}</td><td>${actionCell}</td></tr>`;
     }).join('')}</tbody></table></div></div>`;
   });
   c.innerHTML=html;
 }
 
-function toggleProgressBringToUnit(jobId){
+function toggleProgressBTU(jobId){
   const j=allJobs.find(x=>x.id===jobId);if(!j)return;
   j.bringToUnit=!j.bringToUnit;
-  // Note: deliberately does NOT update Airtable delivery field — app display only
+  // App display only — Airtable delivery field unchanged
   renderProgress();
 }
+
+function markComplete(jobId){
   const j=allJobs.find(x=>x.id===jobId);if(!j)return;
   if(j.bringToUnit){
     showConfirm('Job completed - '+j.model,'Was this vehicle delivered to <b>'+j.to+'</b> or brought back to the <b>Unit</b>?',[
@@ -1995,40 +1993,38 @@ const ALL_COLS_DEF=[
   {key:'bookingSource',label:'Source',type:'select',opts:SOURCE_OPTS,field:'Booking Source',w:'110px'},
   {key:'customer',label:'Customer',type:'text',field:'Customer',w:'130px'},
   {key:'from',label:'Collection',type:'text',field:'Collection Location',w:'150px'},
-  {key:'availFrom',label:'Avail. From',type:'datetime',field:'Collection Available From',w:'130px'},
   {key:'to',label:'Delivery',type:'text',field:'Delivery Location',w:'150px'},
   {key:'model',label:'Model',type:'text',field:'Vehicle Model',w:'110px'},
   {key:'chassis',label:'Reg/Vin',type:'text',field:'Reg/Vin',w:'110px'},
   {key:'type',label:'Move Type',type:'select',opts:MOVE_OPTS,field:'Movement Type',w:'120px'},
   {key:'charge',label:'Charge',type:'text',field:'Movement Charge',w:'90px'},
-  {key:'fuelCharge',label:'Fuel Charge',type:'text',field:'Fuel Charge',w:'90px'},
+  {key:'fuelCharge',label:'Fuel',type:'text',field:'Fuel Charge',w:'80px'},
   {key:'notes',label:'Notes',type:'text',field:'Notes',w:'180px'},
   {key:'confirmedBy',label:'Confirmed By',type:'text',field:'Confirmed By',w:'120px'},
   {key:'weekNo',label:'Week No',type:'text',field:'Week No.',w:'80px'},
-  {key:'invoiceStatus',label:'Invoice Status',type:'text',field:'Invoice Status',w:'120px'},
-  {key:'invoiceText',label:'Invoice Text',type:'text',field:'Invoice Text',w:'180px'},
+  {key:'invoiceStatus',label:'Inv. Status',type:'text',field:'Invoice Status',w:'110px'},
+  {key:'invoiceText',label:'Inv. Text',type:'text',field:'Invoice Text',w:'160px'},
   {key:'poNumber',label:'PO Number',type:'text',field:'PO Number',w:'110px'},
+  {key:'availFrom',label:'Avail. From',type:'datetime',field:'Collection Available From',w:'130px'},
   {key:'direction',label:'Direction',type:'text',field:'Direction',w:'100px'},
   {key:'deliveryRegion',label:'Del. Region',type:'text',field:'Delivery Region',w:'110px'},
   {key:'collectionRegion',label:'Col. Region',type:'text',field:'Collection Region',w:'110px'},
 ];
-function getColPrefsKey(){return'ptl_aj_cols_'+(currentUser||'default');}
-function getColPrefs(){
-  try{const p=localStorage.getItem(getColPrefsKey());return p?JSON.parse(p):null;}catch(e){return null;}
-}
+const DEFAULT_VISIBLE_COLS=new Set(['status','date','customer','from','to','model','chassis','type','charge','notes','confirmedBy','weekNo','invoiceStatus']);
+let colManagerOpen=false;
+let dragColKey=null;
+
+function getColPrefsKey(){return'ptl_aj_cols_'+(currentUser||'PTL');}
+function getColPrefs(){try{const p=localStorage.getItem(getColPrefsKey());return p?JSON.parse(p):null;}catch(e){return null;}}
 function saveColPrefs(prefs){localStorage.setItem(getColPrefsKey(),JSON.stringify(prefs));}
 function getActiveCols(){
   const prefs=getColPrefs();
-  if(!prefs)return ALL_COLS_DEF.filter((_,i)=>i<15); // default: first 15
-  // Apply saved order and visibility
+  if(!prefs)return ALL_COLS_DEF.filter(c=>DEFAULT_VISIBLE_COLS.has(c.key));
   const result=[];
   prefs.forEach(p=>{const col=ALL_COLS_DEF.find(c=>c.key===p.key);if(col&&!p.hidden)result.push(col);});
-  // Add any new cols not in prefs
-  ALL_COLS_DEF.forEach(col=>{if(!prefs.find(p=>p.key===col.key))result.push(col);});
   return result;
 }
 function resetColPrefs(){localStorage.removeItem(getColPrefsKey());renderColManager();renderAllJobs();}
-let colManagerOpen=false;
 function toggleColManager(){
   colManagerOpen=!colManagerOpen;
   document.getElementById('aj-col-manager').style.display=colManagerOpen?'block':'none';
@@ -2036,33 +2032,23 @@ function toggleColManager(){
 }
 function renderColManager(){
   const list=document.getElementById('aj-col-list');if(!list)return;
-  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
-  list.innerHTML=prefs.map((p,idx)=>{
+  const prefs=getColPrefs()||ALL_COLS_DEF.map(c=>({key:c.key,hidden:!DEFAULT_VISIBLE_COLS.has(c.key)}));
+  list.innerHTML=prefs.map(p=>{
     const col=ALL_COLS_DEF.find(c=>c.key===p.key);if(!col)return'';
-    return`<div style="display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:3px 8px;font-size:11px;cursor:grab" draggable="true" data-key="${p.key}" ondragstart="colDragStart(event,'${p.key}')" ondragover="colDragOver(event)" ondrop="colDrop(event,'${p.key}')">
-      <span style="color:var(--muted);cursor:grab">&#8597;</span>
-      <span>${col.label}</span>
-      <button onclick="toggleColVisibility('${p.key}')" style="background:none;border:none;cursor:pointer;color:${p.hidden?'var(--muted)':'var(--ptl)'};font-size:13px;padding:0;line-height:1">${p.hidden?'&#128065;&#xFE0E;':'&#128065;'}</button>
-    </div>`;
+    return`<div style="display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:3px 8px;font-size:11px;cursor:grab" draggable="true" data-key="${p.key}" ondragstart="colDragStart(event,'${p.key}')" ondragover="event.preventDefault()" ondrop="colDrop(event,'${p.key}')"><span style="color:var(--muted)">&#8597;</span><span>${col.label}</span><button onclick="toggleColVis('${p.key}')" style="background:none;border:none;cursor:pointer;color:${p.hidden?'var(--muted)':'var(--ptl)'};font-size:12px;padding:0;line-height:1" title="${p.hidden?'Show':'Hide'}">&#128065;</button></div>`;
   }).join('');
 }
-let dragColKey=null;
-function colDragStart(e,key){dragColKey=key;e.dataTransfer.effectAllowed='move';}
-function colDragOver(e){e.preventDefault();}
+function colDragStart(e,key){dragColKey=key;}
 function colDrop(e,targetKey){
-  e.preventDefault();
-  if(!dragColKey||dragColKey===targetKey)return;
-  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
-  const fromIdx=prefs.findIndex(p=>p.key===dragColKey);
-  const toIdx=prefs.findIndex(p=>p.key===targetKey);
-  if(fromIdx<0||toIdx<0)return;
-  const item=prefs.splice(fromIdx,1)[0];
-  prefs.splice(toIdx,0,item);
-  saveColPrefs(prefs);dragColKey=null;
-  renderColManager();renderAllJobs();
+  e.preventDefault();if(!dragColKey||dragColKey===targetKey)return;
+  const prefs=getColPrefs()||ALL_COLS_DEF.map(c=>({key:c.key,hidden:!DEFAULT_VISIBLE_COLS.has(c.key)}));
+  const fi=prefs.findIndex(p=>p.key===dragColKey);const ti=prefs.findIndex(p=>p.key===targetKey);
+  if(fi<0||ti<0)return;
+  const item=prefs.splice(fi,1)[0];prefs.splice(ti,0,item);
+  saveColPrefs(prefs);dragColKey=null;renderColManager();renderAllJobs();
 }
-function toggleColVisibility(key){
-  const prefs=getColPrefs()||ALL_COLS_DEF.map((c,i)=>({key:c.key,hidden:i>=15}));
+function toggleColVis(key){
+  const prefs=getColPrefs()||ALL_COLS_DEF.map(c=>({key:c.key,hidden:!DEFAULT_VISIBLE_COLS.has(c.key)}));
   const p=prefs.find(x=>x.key===key);if(p)p.hidden=!p.hidden;
   saveColPrefs(prefs);renderColManager();renderAllJobs();
 }
@@ -2070,7 +2056,7 @@ function toggleColVisibility(key){
 function renderAllJobs(){
   const c=document.getElementById('alljobs-content');
   let jobs=allJobs.slice();
-  if(ajFilterText)jobs=jobs.filter(j=>[j.model,j.chassis,j.from,j.to,j.customer,j.notes,j.confirmedBy,j.chassis,j.bookingSource].join(' ').toLowerCase().includes(ajFilterText));
+  if(ajFilterText)jobs=jobs.filter(j=>[j.model,j.chassis,j.from,j.to,j.customer,j.notes,j.confirmedBy,j.bookingSource].join(' ').toLowerCase().includes(ajFilterText));
   if(ajStatusFilter)jobs=jobs.filter(j=>j.status===ajStatusFilter);
   if(ajTypeFilter)jobs=jobs.filter(j=>j.rawType===ajTypeFilter||j.type===ajTypeFilter);
   const countEl=document.getElementById('aj-count');
@@ -2081,12 +2067,11 @@ function renderAllJobs(){
   jobs.forEach(j=>{
     html+=`<tr id="ajr-${j.airtableId}" style="${highlightedJobId===j.airtableId?'background:rgba(45,190,168,0.15)':''}">`;
     cols.forEach(col=>{
-      const val=j[col.key]||'';
+      const val=j[col.key]!=null?j[col.key]:'';
       const displayVal=col.type==='date'?fmtDateFull(val):col.type==='datetime'?fmtDate(val):val;
       if(col.type==='select'){
-        html+=`<td style="min-width:${col.w}"><select class="aj-select" onchange="ajCellEdit('${j.airtableId}','${col.field}',this.value,'${col.key}')">`;
-        html+=`<option value="">-</option>`;
-        col.opts.forEach(o=>{html+=`<option value="${o}"${val===o?' selected':''}>${o}</option>`;});
+        html+=`<td style="min-width:${col.w}"><select class="aj-select" onchange="ajCellEdit('${j.airtableId}','${col.field}',this.value,'${col.key}')"><option value="">-</option>`;
+        col.opts.forEach(o=>{html+=`<option value="${o}"${String(val)===o?' selected':''}>${o}</option>`;});
         html+=`</select></td>`;
       }else{
         html+=`<td style="min-width:${col.w}"><div class="aj-cell" onclick="ajStartEdit(this,'${j.airtableId}','${col.field}','${col.key}','${col.type}')" title="Click to edit">${displayVal||'<span style="color:var(--muted)">-</span>'}</div></td>`;
@@ -2338,7 +2323,7 @@ function initReportsTab(){
   ['rep-mov-to','rep-inv-to','rep-raw-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=fmt(lastSun);});
   loadDealers();
 }
-async function exportRawDataExcel(){
+function exportRawData(){
   const dateField=document.getElementById('rep-raw-datefield').value;
   const fromDate=document.getElementById('rep-raw-from').value;
   const toDate=document.getElementById('rep-raw-to').value;
@@ -2346,14 +2331,13 @@ async function exportRawDataExcel(){
   if(fromDate||toDate){
     jobs=jobs.filter(j=>{
       const val=dateField==='date'?j.date:j.delDate;
-      const d=parseDate(val);
-      if(!d)return false;
+      const d=parseDate(val);if(!d)return false;
       if(fromDate&&d<new Date(fromDate))return false;
       if(toDate&&d>new Date(toDate+'T23:59:59'))return false;
       return true;
     });
   }
-  if(!jobs.length){showError('No records found in the selected date range');return;}
+  if(!jobs.length){alert('No records found in the selected date range');return;}
   const headers=['Date Booked','Actual Delivery Date','Status','Customer','Collection Location','Delivery Location','Vehicle Model','Reg/Vin','Movement Type','Movement Charge','Fuel Charge','Invoice Status','Invoice Text','PO Number','Week No.','Booking Source','Confirmed By','Notes','PTL Run Name','PTL Run Day','PTL Driver'];
   let csv=headers.join(',')+'\n';
   jobs.forEach(j=>{
@@ -2514,15 +2498,16 @@ function pdfJobStop(doc,j,i,y,M,W,isReturn){
   const arrW=doc.getTextWidth(' > ');
   doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);
   doc.text(to,M+7+fromW+arrW,y+8);
-  // Bring to Unit badge (shown in model line, notes go below separately)
+  // Notes
   let extraY=0;
+  // Bring to Unit badge — shown first
   if(j.bringToUnit&&!isReturn){
     doc.setFillColor(167,139,250);doc.roundedRect(M+7,y+11,24,5,1,1,'F');
     doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
     doc.text('Bring to Unit',M+8,y+14.5);
     extraY=7;
   }
-  // Notes — placed after Bring to Unit badge if present
+  // Notes — placed below badge if present
   if(j.notes){
     const ny=y+11+extraY;
     doc.setFillColor(250,238,218);
@@ -2722,7 +2707,13 @@ setTimeout(function(){
 // === INIT ===
 let currentUser='PTL';
 document.getElementById('session-name').textContent=currentUser;
-initApp();
+// Init app directly — PIN removed
+document.getElementById('hdr-date').textContent=TODAY.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+updateConnDisplay();
+document.getElementById('set-token').value=getToken();
+document.getElementById('set-base').value=getBase();
+document.getElementById('set-table').value=getTable();
+loadDrivers().then(()=>loadJobs());
 
 </script>
 </body>
